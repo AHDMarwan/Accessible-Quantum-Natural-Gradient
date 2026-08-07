@@ -1,127 +1,91 @@
-# AQNG with PennyLane — minimal usage
+# AQNG for PennyLane
 
-Target API: PennyLane 0.45.x.
-
-The implementation is intentionally based on PennyLane's own `QNGOptimizer`.
-PennyLane allows a custom `metric_tensor_fn`; AQNG supplies
+Accessible Quantum Natural Gradient (AQNG) uses the Fisher geometry visible through a selected measurement/readout space,
 
 \[
-G_{\rm acc}=J^T\Sigma^+J
+G_{\rm acc}=\frac1B\sum_{b=1}^B J_b^T\Sigma_b^{+}J_b.
 \]
 
-instead of the Fubini–Study metric.
+Target API: PennyLane `0.45.x`, using the `pennylane.numpy` / Autograd workflow.
 
-## 1. Your VQC readout
+## Install
 
-Use one trainable parameter array. For a real-data mini-batch, it is easiest to
-close over `X_batch, y_batch` so only `theta` is trainable.
+```bash
+pip install --upgrade "git+https://github.com/AHDMarwan/aqng.git"
+```
+
+## Corrected solver
+
+The first prototype built the full `p x p` matrix `G_acc` and delegated the update to `qml.QNGOptimizer`. The current `AQNGOptimizer` instead factors
+
+\[
+G_{\rm acc}=A^T A
+\]
+
+and solves
+
+\[
+(G_{\rm acc}+\lambda I)d=\nabla L
+\]
+
+directly.
+
+With `solver="auto"` and `lam > 0` it chooses the smaller exact system:
+
+- **primal:** size `p` when `p <= B*r`;
+- **dual (Woodbury):** size `B*r` when `B*r < p`.
+
+For `lam=0` it uses an SVD Moore-Penrose pseudoinverse. The mini-batch dual dimension is `B*r`, not generally `r`.
+
+## Minimal use
+
+```python
+from aqng_pennylane import AQNGOptimizer
+
+aqng = AQNGOptimizer(
+    stepsize=0.03,
+    lam=1e-3,
+    cov_lam=1e-3,
+    rcond=1e-8,
+    solver="auto",
+)
+
+theta, old_loss = aqng.step_and_cost(
+    cost,
+    theta,
+    feature_fn=features,          # (r,) or (batch, r), differentiable
+    covariance_fn=covariance,    # (r,r) or (batch,r,r), not differentiated
+)
+
+print(aqng.diagnostics)
+```
+
+`aqng.diagnostics` reports the metric rank/condition number, chosen solver, and actual linear-system dimension.
+
+## Finite-shot Z readouts
+
+If the accessible features are diagonal Z strings, all feature covariances can be estimated from the same computational-basis bitstrings:
+
+```python
+from aqng_pennylane import z_covariance_from_bitstrings
+
+Sigma = z_covariance_from_bitstrings(
+    samples,
+    z_terms=[(0,), (1,), (0,1), (0,2)],
+)
+```
+
+Use `diff_method="parameter-shift"` for hardware-compatible feature Jacobians. `covariance_fn` itself is not differentiated.
+
+## PennyLane QNG baseline
 
 ```python
 import pennylane as qml
-from pennylane import numpy as np
-from aqng_pennylane import AQNGOptimizer, z_covariance_from_bitstrings
-
-# Example diagonal readout dictionary. Extend as needed.
-z_terms = [(0,), (1,), (2,), (3,), (0,1), (0,2), (0,3), (1,2), (1,3), (2,3)]
-
-# `feature_qnode(theta, x)` should return expectation values for these terms.
-# `sample_qnode(theta, x)` should return computational-basis samples.
+qng = qml.QNGOptimizer(stepsize=0.03, approx="block-diag", lam=1e-3)
 ```
 
-For PennyLane QNodes, make the feature QNode array-valued outside the QNode:
+For a fair comparison keep the circuit, initialization, mini-batches, loss, learning-rate tuning protocol, and shot budget identical. Report convergence versus iterations **and** total circuit executions/shots.
 
-```python
-def feature_vec(theta, x):
-    # feature_qnode may return a tuple of expvals
-    return qml.math.stack(feature_qnode(theta, x), axis=-1)
+## Explicit custom-metric compatibility
 
-def covariance_one(theta, x):
-    shots = sample_qnode(theta, x)       # shape (shots, n_wires)
-    return z_covariance_from_bitstrings(shots, z_terms)
-```
-
-With finite-shot hardware, use `diff_method="parameter-shift"` for the feature
-QNode. The covariance is not differentiated, so it can come directly from
-bitstrings.
-
-## 2. Mini-batch closures
-
-```python
-def make_batch_functions(X_batch, y_batch):
-    def features(theta):
-        return qml.math.stack([feature_vec(theta, x) for x in X_batch])
-
-    def covariance(theta):
-        return np.stack([covariance_one(theta, x) for x in X_batch])
-
-    def cost(theta):
-        pred = features(theta)
-        # Replace with your actual differentiable loss.
-        # Example: one selected feature as a regression/logit output.
-        return np.mean((pred[:, 0] - y_batch) ** 2)
-
-    return cost, features, covariance
-```
-
-## 3. AQNG training step
-
-```python
-aqng = AQNGOptimizer(
-    stepsize=0.05,
-    lam=1e-3,       # damping of G_acc before natural-gradient inversion
-    cov_lam=1e-3,   # recommended for finite-shot covariance estimates
-    rcond=1e-8,
-)
-
-for X_batch, y_batch in loader:
-    cost, features, covariance = make_batch_functions(X_batch, y_batch)
-    theta, old_cost = aqng.step_and_cost(
-        cost,
-        theta,
-        feature_fn=features,
-        covariance_fn=covariance,
-    )
-    print(float(old_cost), aqng.diagnostics)
-```
-
-## 4. PennyLane QNG baseline
-
-Use your normal PennyLane QNG setup on a copy of the same initial parameters:
-
-```python
-qng = qml.QNGOptimizer(stepsize=0.05, approx="block-diag", lam=1e-3)
-```
-
-For a strict comparison, keep identical:
-
-- circuit architecture and initialization;
-- mini-batches and data order;
-- loss function;
-- number of optimization steps;
-- shot budget, where possible;
-- learning-rate tuning protocol.
-
-AQNG and PennyLane QNG differ in the geometry: AQNG uses the Fisher information
-available in the selected readout; PennyLane QNG uses the circuit-state
-Fubini–Study metric (or its selected approximation).
-
-## 5. Direct custom-metric mode
-
-If you prefer not to use the wrapper class:
-
-```python
-from aqng_pennylane import make_aqng_metric_tensor_fn
-
-metric = make_aqng_metric_tensor_fn(
-    features,
-    covariance,
-    cov_lam=1e-3,
-)
-
-pl_opt = qml.QNGOptimizer(stepsize=0.05, approx=None, lam=1e-3)
-theta = pl_opt.step(cost, theta, metric_tensor_fn=metric)
-```
-
-That is the cleanest apples-to-apples implementation: PennyLane performs the
-same QNG update, while the supplied metric is `G_acc` rather than its native
-Fubini–Study metric.
+`make_aqng_metric_tensor_fn(...)` is retained for experiments that intentionally use PennyLane's `QNGOptimizer` with `G_acc` as a custom metric. That compatibility path materializes a `p x p` matrix and therefore does not provide the primal/dual solve advantage of `AQNGOptimizer`.
