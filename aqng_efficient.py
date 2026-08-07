@@ -1,20 +1,25 @@
 """Efficient Accessible Quantum Natural Gradient (AQNG) for PennyLane.
 
-This module builds on :mod:`aqng_pennylane` and targets the dominant practical
+This module builds on :mod:`aqng_pennylane` and reduces the dominant practical
 cost of AQNG: repeatedly rebuilding the accessible Fisher geometry.
 
-Key changes relative to ``AQNGOptimizer``:
-  * cache the accessible Fisher factor for ``metric_every`` optimization steps;
-  * allow the metric feature/covariance closures to use a smaller mini-batch
-    than the objective/gradient mini-batch;
-  * retain automatic primal/dual solving;
-  * compute expensive spectral diagnostics only when the metric is refreshed;
-  * expose timing diagnostics to identify the real bottleneck.
+In addition to stochastic metric mini-batches and metric caching, this version
+adds two safeguards for stale cached geometry:
 
-For simulator benchmarks, define the differentiable feature QNode with
-``diff_method="adjoint"`` (when supported). On finite-shot hardware, use
-``diff_method="parameter-shift"``. The optimizer itself does not change a
-QNode's differentiation method.
+* adaptive refresh: when a cached metric proposes an anomalously large natural
+  gradient direction, rebuild the metric at the current parameters and solve
+  again before accepting the step;
+* trust-region clipping: bound the accepted direction in Euclidean norm and/or
+  in the accessible metric norm
+
+      ||Delta theta||_G = stepsize * ||A d||,
+
+  where ``G_acc = A.T @ A`` and ``d`` is the damped natural-gradient direction.
+
+For simulator benchmarks, define differentiable expectation-value QNodes with
+``diff_method="adjoint"`` when supported. On finite-shot hardware, use
+``diff_method="parameter-shift"``. The optimizer itself does not change QNode
+differentiation settings.
 
 Target: PennyLane 0.45.x, Autograd / ``pennylane.numpy``, one trainable
 parameter array.
@@ -58,10 +63,17 @@ class EfficientDiagnostics:
     solver: str
     solve_dimension: int
     gradient_norm: float
+    raw_direction_norm: float
     natural_gradient_norm: float
+    raw_metric_step_norm: float
+    metric_step_norm: float
     metric_recomputed: bool
+    adaptive_refresh_triggered: bool
+    refresh_reason: str
     metric_age: int
     metric_refreshes: int
+    trust_region_clipped: bool
+    clip_scale: float
     gradient_seconds: float
     metric_seconds: float
     solve_seconds: float
@@ -69,14 +81,11 @@ class EfficientDiagnostics:
 
 
 class AQNGEfficientOptimizer:
-    """Cached / stochastic-metric AQNG optimizer for PennyLane.
+    """Cached / stochastic-metric AQNG optimizer with stale-metric safeguards.
 
-    The objective and metric may use different mini-batches. Close
-    ``objective_fn`` over the loss batch and ``feature_fn`` /
-    ``covariance_fn`` over a smaller metric batch.
-
-    ``solver="auto"`` uses the smaller exact damped system: parameter space
+    ``solver='auto'`` chooses the smaller exact damped system: parameter-space
     dimension ``p`` or stacked readout dimension ``B_metric * r``.
+    The objective and metric may use different mini-batches.
     """
 
     def __init__(
@@ -85,7 +94,11 @@ class AQNGEfficientOptimizer:
         *,
         lam: float = 1e-3,
         cov_lam: float = 0.0,
-        metric_every: int = 4,
+        metric_every: int = 2,
+        adaptive_refresh: bool = True,
+        refresh_direction_growth: Optional[float] = 2.5,
+        max_direction_norm: Optional[float] = None,
+        max_metric_step: Optional[float] = None,
         solver: str = "auto",
         rcond: float = 1e-10,
         project_cov_psd: bool = True,
@@ -99,6 +112,12 @@ class AQNGEfficientOptimizer:
             raise ValueError("cov_lam must be nonnegative")
         if metric_every < 1:
             raise ValueError("metric_every must be >= 1")
+        if refresh_direction_growth is not None and refresh_direction_growth <= 1.0:
+            raise ValueError("refresh_direction_growth must be > 1 or None")
+        if max_direction_norm is not None and max_direction_norm <= 0:
+            raise ValueError("max_direction_norm must be positive or None")
+        if max_metric_step is not None and max_metric_step <= 0:
+            raise ValueError("max_metric_step must be positive or None")
         if solver not in ("auto", "primal", "dual", "svd"):
             raise ValueError("solver must be 'auto', 'primal', 'dual', or 'svd'")
         if reduction not in ("mean", "sum"):
@@ -110,6 +129,16 @@ class AQNGEfficientOptimizer:
         self.lam = float(lam)
         self.cov_lam = float(cov_lam)
         self.metric_every = int(metric_every)
+        self.adaptive_refresh = bool(adaptive_refresh)
+        self.refresh_direction_growth = (
+            None if refresh_direction_growth is None else float(refresh_direction_growth)
+        )
+        self.max_direction_norm = (
+            None if max_direction_norm is None else float(max_direction_norm)
+        )
+        self.max_metric_step = (
+            None if max_metric_step is None else float(max_metric_step)
+        )
         self.solver = solver
         self.rcond = float(rcond)
         self.project_cov_psd = bool(project_cov_psd)
@@ -122,6 +151,7 @@ class AQNGEfficientOptimizer:
         self._step_index = 0
         self._last_refresh_step: Optional[int] = None
         self._metric_refreshes = 0
+        self._last_raw_direction_norm: Optional[float] = None
 
         self.last_direction = None
         self.last_diagnostics: Optional[EfficientDiagnostics] = None
@@ -132,7 +162,6 @@ class AQNGEfficientOptimizer:
 
     @property
     def metric_tensor(self):
-        """Materialize the cached p x p metric only when explicitly requested."""
         if self._cached_factor is None:
             return None
         metric = self._cached_factor.T @ self._cached_factor
@@ -145,12 +174,14 @@ class AQNGEfficientOptimizer:
         return self._step_index - self._last_refresh_step
 
     def reset_metric(self):
-        """Discard cached geometry; the next step will rebuild it."""
         self._cached_factor = None
         self._cached_param_shape = None
         self._factor_fn = None
         self._spectral_cache = None
         self._last_refresh_step = None
+
+    def reset_history(self):
+        self._last_raw_direction_norm = None
 
     def _make_factor(self, feature_fn: ArrayFn, covariance_fn: ArrayFn):
         return AccessibleFisherFactor(
@@ -162,7 +193,7 @@ class AQNGEfficientOptimizer:
             reduction=self.reduction,
         )
 
-    def _should_refresh(self, recompute_metric: Optional[bool]) -> bool:
+    def _scheduled_refresh(self, recompute_metric: Optional[bool]) -> bool:
         if recompute_metric is not None:
             return bool(recompute_metric) or self._cached_factor is None
         if self._cached_factor is None:
@@ -177,7 +208,6 @@ class AQNGEfficientOptimizer:
         return self.solver
 
     def _solve(self, a: onp.ndarray, grad: onp.ndarray):
-        """Solve ``(A.T A + lam I) direction = grad``."""
         m, p = a.shape
         solver = self._select_solver(m, p)
 
@@ -252,6 +282,82 @@ class AQNGEfficientOptimizer:
             forward = objective_fn(params, *args, **kwargs) if need_forward else None
         return grad, forward
 
+    def _refresh_factor(
+        self,
+        params,
+        args,
+        kwargs,
+        feature_fn: ArrayFn,
+        covariance_fn: ArrayFn,
+        p_shape,
+        p: int,
+    ):
+        factor_fn = self._make_factor(feature_fn, covariance_fn)
+        factor = factor_fn(params, *args, **kwargs)
+        if factor.shape[1] != p:
+            raise ValueError(
+                f"AQNG factor parameter dimension {factor.shape[1]} "
+                f"!= gradient dimension {p}"
+            )
+        self._cached_factor = factor
+        self._cached_param_shape = p_shape
+        self._factor_fn = factor_fn
+        self._spectral_cache = self._spectral_summary(factor)
+        self._last_refresh_step = self._step_index
+        self._metric_refreshes += 1
+        return factor
+
+    def _adaptive_refresh_reason(self, direction: onp.ndarray, using_stale_metric: bool):
+        if not self.adaptive_refresh or not using_stale_metric:
+            return ""
+        norm = float(onp.linalg.norm(direction))
+        if not onp.isfinite(norm) or not onp.all(onp.isfinite(direction)):
+            return "nonfinite_direction"
+        if self.max_direction_norm is not None and norm > self.max_direction_norm:
+            return "max_direction_norm"
+        if (
+            self.refresh_direction_growth is not None
+            and self._last_raw_direction_norm is not None
+            and self._last_raw_direction_norm > 0.0
+            and norm > self.refresh_direction_growth * self._last_raw_direction_norm
+        ):
+            return "direction_growth"
+        return ""
+
+    def _apply_trust_region(self, factor: onp.ndarray, direction: onp.ndarray):
+        raw_direction_norm = float(onp.linalg.norm(direction))
+        raw_metric_step_norm = float(
+            self.stepsize * onp.linalg.norm(factor @ direction)
+        )
+        scale = 1.0
+        if (
+            self.max_direction_norm is not None
+            and raw_direction_norm > self.max_direction_norm
+            and raw_direction_norm > 0.0
+        ):
+            scale = min(scale, self.max_direction_norm / raw_direction_norm)
+        if (
+            self.max_metric_step is not None
+            and raw_metric_step_norm > self.max_metric_step
+            and raw_metric_step_norm > 0.0
+        ):
+            scale = min(scale, self.max_metric_step / raw_metric_step_norm)
+        clipped = bool(scale < 1.0)
+        accepted = direction * scale
+        direction_norm = float(onp.linalg.norm(accepted))
+        metric_step_norm = float(
+            self.stepsize * onp.linalg.norm(factor @ accepted)
+        )
+        return (
+            accepted,
+            raw_direction_norm,
+            direction_norm,
+            raw_metric_step_norm,
+            metric_step_norm,
+            clipped,
+            float(scale),
+        )
+
     def _step_impl(
         self,
         objective_fn: ArrayFn,
@@ -271,7 +377,6 @@ class AQNGEfficientOptimizer:
             recompute_metric = bool(recompute_tensor)
 
         t_total = perf_counter()
-
         t_grad = perf_counter()
         grad, forward = self._gradient_and_forward(
             objective_fn, params, args, kwargs, grad_fn, need_forward
@@ -287,27 +392,19 @@ class AQNGEfficientOptimizer:
                 f"gradient size {grad_flat.size} != parameter size {p}."
             )
 
-        refresh = self._should_refresh(recompute_metric)
+        scheduled_refresh = self._scheduled_refresh(recompute_metric)
+        metric_recomputed = bool(scheduled_refresh)
+        adaptive_refresh_triggered = False
+        refresh_reason = "scheduled" if scheduled_refresh else ""
         metric_seconds = 0.0
+        solve_seconds = 0.0
 
-        if refresh:
+        if scheduled_refresh:
             t_metric = perf_counter()
-            factor_fn = self._make_factor(feature_fn, covariance_fn)
-            factor = factor_fn(params, *args, **kwargs)
-            metric_seconds = perf_counter() - t_metric
-
-            if factor.shape[1] != p:
-                raise ValueError(
-                    f"AQNG factor parameter dimension {factor.shape[1]} "
-                    f"!= gradient dimension {p}"
-                )
-
-            self._cached_factor = factor
-            self._cached_param_shape = p_shape
-            self._factor_fn = factor_fn
-            self._spectral_cache = self._spectral_summary(factor)
-            self._last_refresh_step = self._step_index
-            self._metric_refreshes += 1
+            factor = self._refresh_factor(
+                params, args, kwargs, feature_fn, covariance_fn, p_shape, p
+            )
+            metric_seconds += perf_counter() - t_metric
         else:
             factor = self._cached_factor
             if self._cached_param_shape != p_shape:
@@ -317,10 +414,46 @@ class AQNGEfficientOptimizer:
 
         t_solve = perf_counter()
         direction, solver, solve_dim = self._solve(factor, grad_flat)
-        solve_seconds = perf_counter() - t_solve
+        solve_seconds += perf_counter() - t_solve
 
-        self.last_direction = direction.copy()
-        updated = _to_numpy(params) - self.stepsize * direction.reshape(p_shape)
+        reason = self._adaptive_refresh_reason(
+            direction, using_stale_metric=not scheduled_refresh
+        )
+        if reason:
+            adaptive_refresh_triggered = True
+            refresh_reason = reason
+            metric_recomputed = True
+            t_metric = perf_counter()
+            factor = self._refresh_factor(
+                params, args, kwargs, feature_fn, covariance_fn, p_shape, p
+            )
+            metric_seconds += perf_counter() - t_metric
+            t_solve = perf_counter()
+            direction, solver, solve_dim = self._solve(factor, grad_flat)
+            solve_seconds += perf_counter() - t_solve
+
+        if not onp.all(onp.isfinite(direction)):
+            raise FloatingPointError(
+                "AQNG produced a non-finite natural-gradient direction even "
+                "after the available metric refresh."
+            )
+
+        (
+            accepted_direction,
+            raw_direction_norm,
+            direction_norm,
+            raw_metric_step_norm,
+            metric_step_norm,
+            clipped,
+            clip_scale,
+        ) = self._apply_trust_region(factor, direction)
+
+        self._last_raw_direction_norm = raw_direction_norm
+        self.last_direction = accepted_direction.copy()
+        updated = (
+            _to_numpy(params)
+            - self.stepsize * accepted_direction.reshape(p_shape)
+        )
         new_params = pnp.array(
             updated, requires_grad=getattr(params, "requires_grad", True)
         )
@@ -343,16 +476,22 @@ class AQNGEfficientOptimizer:
             solver=solver,
             solve_dimension=solve_dim,
             gradient_norm=float(onp.linalg.norm(grad_flat)),
-            natural_gradient_norm=float(onp.linalg.norm(direction)),
-            metric_recomputed=bool(refresh),
+            raw_direction_norm=raw_direction_norm,
+            natural_gradient_norm=direction_norm,
+            raw_metric_step_norm=raw_metric_step_norm,
+            metric_step_norm=metric_step_norm,
+            metric_recomputed=metric_recomputed,
+            adaptive_refresh_triggered=adaptive_refresh_triggered,
+            refresh_reason=refresh_reason,
             metric_age=int(age),
             metric_refreshes=int(self._metric_refreshes),
+            trust_region_clipped=clipped,
+            clip_scale=clip_scale,
             gradient_seconds=float(grad_seconds),
             metric_seconds=float(metric_seconds),
             solve_seconds=float(solve_seconds),
             total_step_seconds=float(total_seconds),
         )
-
         self._step_index += 1
         return new_params, forward
 
@@ -368,7 +507,6 @@ class AQNGEfficientOptimizer:
         recompute_tensor: Optional[bool] = None,
         **kwargs,
     ):
-        """Take one efficient AQNG step."""
         new_params, _ = self._step_impl(
             objective_fn,
             params,
@@ -395,7 +533,6 @@ class AQNGEfficientOptimizer:
         recompute_tensor: Optional[bool] = None,
         **kwargs,
     ):
-        """Take one efficient AQNG step and return ``(new_params, old_cost)``."""
         return self._step_impl(
             objective_fn,
             params,
