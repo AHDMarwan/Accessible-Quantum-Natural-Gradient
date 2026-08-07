@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aqng-pennylane"
+version = "0.2.0"
+description = "Accessible Quantum Natural Gradient optimizer for PennyLane"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "numpy>=1.24",
+  "pennylane>=0.45,<0.46",
+]
+
+[tool.setuptools]
+py-modules = ["aqng_pennylane"]
