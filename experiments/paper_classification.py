@@ -266,7 +266,9 @@ def train_method(bundle,method,cfg,data,batches):
             mt+=time.perf_counter()-t; builds+=1; metric_examples+=len(mids)
             d=spectral(G,cfg.lam,cfg.rcond); d.update(step=step,method=method); mdiags.append(d)
             if firstG is None: firstG=onp.array(G,copy=True)
-        cost=make_cost(bundle.pred,X[ids],ypm); grad_fn=qml.grad(cost)
+        # Loss inputs and targets MUST use the identical minibatch indices.
+        # This is a fairness invariant as well as a shape invariant.
+        cost=make_cost(bundle.pred,X[ids],ypm[ids]); grad_fn=qml.grad(cost)
         t=time.perf_counter(); g=tonp(grad_fn(theta)).reshape(-1); gt+=time.perf_counter()-t; loss_examples+=len(ids); loss=float(grad_fn.forward)
         t=time.perf_counter(); direction=solve_direction(G,g,cfg.lam); st+=time.perf_counter()-t
         if firstg is None: firstg=onp.array(g,copy=True); firstd=onp.array(direction,copy=True)
