@@ -68,9 +68,15 @@ The classification loss uses `<Z0>`, while the main AQNG metric uses all diagona
 
 Crucially, these probes reuse the **same first AQNG Jacobian and covariance build**. They add only small classical linear-algebra contractions and do not introduce extra quantum evaluations or extra optimizer trajectories.
 
-For every paired seed we record probe rank, trace/QFIM ratio, direction cosine to Full-QNG, and the numerical Loewner checks
+For every paired seed we record probe rank, trace/QFIM ratio, direction cosine to Full-QNG, and the raw numerical Loewner residuals for
 
 `G_A1 <= G_local <= G_le2 <= G_Q`.
+
+The theoretical hierarchy is exact. Numerically, however, these metrics contain eigendecompositions and Moore-Penrose pseudoinverses. The half-filled U(1) readout covariance has exact linear dependencies, so tiny positive residuals can appear from floating-point arithmetic even when the underlying nested-span identity is satisfied. The smoke test therefore uses a transparent scale-aware tolerance
+
+`residual <= 1e-10 + 1e-5 * max(1, lambda_max(G_Q))`
+
+and prints every raw residual. This tolerance affects **validation only**; it does not change `rcond`, the covariance pseudoinverse, any optimizer metric, or any update direction.
 
 ## Default confirmatory protocol
 
@@ -108,7 +114,7 @@ Before the 80 dataset/seed jobs start, the workflow checks all four families for
 
 - native broadcasting = scalar execution,
 - symmetric PSD A1/local/le2/QFIM matrices,
-- `A1 <= local <= le2 <= QFIM` numerically,
+- `A1 <= local <= le2 <= QFIM` within the documented numerical tolerance while retaining the raw residuals,
 - main AQNG metric = the `le2` probe,
 - finite damped directions,
 - exact half-filling support preservation for the U(1) circuit.
