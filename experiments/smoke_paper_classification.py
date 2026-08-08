@@ -10,7 +10,7 @@ import numpy as np
 from pennylane import numpy as qnp
 from paper_classification import (
     CircuitBundle, Config, FAMILIES, make_data, parameter_count,
-    solve_direction, spectral, tonp,
+    schedule, solve_direction, spectral, tonp, train_method,
 )
 
 LOEWNER_RTOL = 1e-5
@@ -52,7 +52,6 @@ def main():
         if not np.allclose(vec, loop, atol=1e-10, rtol=1e-10):
             raise AssertionError(f"broadcast mismatch for {family}")
 
-        # Check exact symmetry support before any metric assertions.
         outside = None
         if family == "u1_rzxy":
             raw_probs = tonp(b.probs(tonp(theta), Xb[0])).reshape(-1)
@@ -85,8 +84,6 @@ def main():
             "local<=le2": maxeig(probes["local"] - probes["le2"]),
             "le2<=QFIM": maxeig(probes["le2"] - Gq),
         }
-        # QFIM is the outer metric in the hierarchy. max(1, .) avoids an
-        # artificially tiny tolerance for nearly-flat test points.
         scale = max(1.0, float(np.linalg.eigvalsh(Gq)[-1]))
         loewner_tol = LOEWNER_ATOL + LOEWNER_RTOL * scale
         for label, val in checks.items():
@@ -119,6 +116,18 @@ def main():
             extra,
         )
 
+    # End-to-end one-step optimizer integration check. This specifically
+    # exercises minibatch input/target indexing, gradient evaluation, metric
+    # construction, damped solve and parameter update through train_method.
+    integ_bundle = CircuitBundle("ryrz_cz", cfg)
+    integ_batches = schedule(len(data["X_train"]), cfg)[:1]
+    integ = train_method(integ_bundle, "AQNG", cfg, data, integ_batches)
+    r = integ["result"]
+    if not np.isfinite(r["train_loss"]) or not np.isfinite(r["test_loss"]):
+        raise AssertionError("end-to-end training integration produced nonfinite loss")
+    if r["loss_examples_total"] != len(integ_batches[0]):
+        raise AssertionError("end-to-end minibatch accounting mismatch")
+    print("TRAINING INTEGRATION SMOKE PASSED")
     print("SMOKE TEST PASSED")
 
 
