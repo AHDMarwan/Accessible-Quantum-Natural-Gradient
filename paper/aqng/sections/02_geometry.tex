@@ -27,6 +27,35 @@ Thus $\GA$ is the parameter-space pullback of accessible tangent geometry and id
 \end{align}
 The goal is not $\GA\simeq\GQ$ in matrix norm. The operational question is whether the accessible preconditioner preserves or improves directions that matter to the task.
 
+\begin{figure*}[t]
+\centering
+\begin{tikzpicture}[font=\small,>=Latex,node distance=7mm and 9mm,
+ box/.style={draw,rounded corners,align=center,minimum height=8mm,inner xsep=6pt},
+ aq/.style={box,fill=blue!7}, fq/.style={box,fill=gray!10}, shared/.style={box,fill=green!7}]
+\node[shared] (data) {minibatch $B_L$\\loss $L(\bm\theta)$};
+\node[shared,right=of data] (grad) {$g=\nabla_{\bm\theta}L$};
+\node[shared,right=of grad] (state) {$|\psi_{\bm\theta}(x)\rangle$\\metric batch $B_G$};
+\node[aq,below right=9mm and -2mm of state] (read) {retained readout\\$\{Z_i,Z_iZ_j\}$};
+\node[aq,right=of read] (js) {$J_x,\ \Sigma_x$};
+\node[aq,right=of js] (ga) {$G_A=\langle J_x^T\Sigma_x^+J_x\rangle_{B_G}$};
+\node[fq,above right=9mm and -2mm of state] (qfim) {full state derivatives\\QFIM $G_Q$};
+\node[box,right=13mm of ga] (solve) {damped solve\\$(G+\lambda I)d=g$};
+\node[shared,right=of solve] (update) {$\bm\theta\leftarrow\bm\theta-\eta d$};
+\draw[->] (data)--(grad);
+\draw[->] (grad)--(state);
+\draw[->] (state)--(read);
+\draw[->] (read)--(js);
+\draw[->] (js)--(ga);
+\draw[->] (state)--(qfim);
+\draw[->] (ga)--node[below,sloped]{AQNG}(solve);
+\draw[->] (qfim.east)-|node[pos=.75,above]{Full-QNG}(solve.north);
+\draw[->] (grad.south) |- (solve.west);
+\draw[->] (solve)--(update);
+\end{tikzpicture}
+\caption{Algorithmic schematic. AQNG and full QNG share the same loss gradient and parameter initialization. They differ only in the metric used to precondition that gradient. AQNG constructs a covariance-normalized pullback from the retained one- and two-body diagonal readout, whereas full QNG constructs the full state-space QFIM. Both use the same damped linear solve and parameter update.}
+\label{fig:algorithm}
+\end{figure*}
+
 \subsection{Nested readout probes}
 The implementation diagnoses three nested diagonal readout spaces: a minimal probe $A_1$, the full local-$Z$ span, and the joint span of diagonal Pauli strings through weight two, denoted $\mathcal A_{\le2}$. The main AQNG metric uses the $\le2$ accessible geometry. The expected nesting is
 \begin{equation}
