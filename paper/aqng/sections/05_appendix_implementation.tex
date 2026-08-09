@@ -1,0 +1,98 @@
+\appendix
+\section{Exact AQNG construction used in the experiments}
+\label{app:aqng}
+
+This appendix specifies the AQNG instance used for the reported benchmark so that the optimizer can be reconstructed from the experimental record.  We distinguish the mathematical construction from run-time arguments: the former defines the accessible metric, whereas the latter controls its numerical estimation and refresh schedule.
+
+\subsection{Inputs and retained readout family}
+For a parameterized circuit $U(\bm\theta)$ on $n$ qubits and an encoded input $x$, AQNG takes (i) the current parameter vector $\bm\theta\in\mathbb R^p$, (ii) a metric minibatch $B_G$, (iii) a retained observable list $\mathcal A=\{O_a\}_{a=1}^{r}$, (iv) a damping coefficient $\lambda$, and (v) a numerical pseudoinverse cutoff $\texttt{rcond}$.  The paper configuration uses the complete diagonal Pauli-$Z$ family through weight two,
+\begin{equation}
+ \mathcal A_{\le2}=\{Z_i\}_{i=1}^{n}\cup\{Z_iZ_j\}_{1\le i<j\le n}.
+\end{equation}
+For $n=6$ this gives $r=6+\binom{6}{2}=21$ retained features.  Two smaller spaces are used only as diagnostics: $A_1=\mathrm{span}\{Z_0\}$ and the local space $\mathrm{span}\{Z_i\}_{i=1}^{6}$.  They are not substituted for $\mathcal A_{\le2}$ in the main AQNG training runs.
+
+For each $x\in B_G$, define the retained expectation vector
+\begin{equation}
+ \bm m(x,\bm\theta)=\big(\langle O_1\rangle,\ldots,\langle O_r\rangle\big)^{\mathsf T},
+\end{equation}
+its parameter Jacobian $J_x=\partial\bm m/\partial\bm\theta\in\mathbb R^{r\times p}$, and the symmetrized feature covariance
+\begin{equation}
+ (\Sigma_x)_{ab}=\frac12\langle O_aO_b+O_bO_a\rangle-\langle O_a\rangle\langle O_b\rangle.
+ \label{eq:app-cov}
+\end{equation}
+Because the retained observables are diagonal Pauli-$Z$ strings, they commute in the present implementation.  The covariance-normalized score map is represented by $\Sigma_x^{+1/2}J_x$, with null covariance directions removed by the pseudoinverse.  The per-example accessible Gram matrix is therefore
+\begin{equation}
+ G_A(x)=J_x^{\mathsf T}\Sigma_x^{+}J_x,
+ \label{eq:app-ga-single}
+\end{equation}
+and the metric used by one refresh is the minibatch average
+\begin{equation}
+ \widehat G_A(\bm\theta;B_G)=\frac{1}{|B_G|}\sum_{x\in B_G}G_A(x).
+ \label{eq:app-ga-batch}
+\end{equation}
+Equations~\eqref{eq:app-cov}--\eqref{eq:app-ga-batch} are the finite-feature realization of the pullback in Eq.~\eqref{eq:GA}: the Jacobian maps parameter motion into retained readout motion, while $\Sigma_x^{+}$ supplies the covariance/Fisher normalization on that retained motion.
+
+\subsection{Update rule and metric refresh}
+Let $B_L$ be the loss minibatch and
+\begin{equation}
+ \bm g_t=\nabla_{\bm\theta}L(\bm\theta_t;B_L)
+\end{equation}
+its ordinary parameter gradient.  At a metric-refresh step, AQNG constructs $\widehat G_{A,t}$ from Eq.~\eqref{eq:app-ga-batch}; otherwise it reuses the most recently constructed matrix.  The implemented preconditioned direction is obtained from the damped linear system
+\begin{equation}
+ (\widehat G_{A,t}+\lambda I)\bm d_t=\bm g_t,
+ \qquad
+ \bm\theta_{t+1}=\bm\theta_t-\eta\bm d_t.
+ \label{eq:app-update}
+\end{equation}
+A pseudoinverse/SVD cutoff $\texttt{rcond}=10^{-8}$ is used for numerically singular covariance/metric directions.  Damping is applied before the update solve; it regularizes small accessible eigenvalues and prevents null or nearly null retained directions from producing arbitrarily large parameter steps.
+
+The metric is deliberately not rebuilt on every optimization step.  With \texttt{metric\_every}$=2$, the 20-step benchmark performs 10 metric builds.  With \texttt{metric\_batch}$=4$, this corresponds to 40 metric examples per method and seed.  The loss gradient uses \texttt{loss\_batch}$=8$ at each of 20 steps, for 160 loss examples per method and seed.  These logical workloads are matched between AQNG and full QNG; the wall-clock comparison in the main text remains backend-specific.
+
+\subsection{Arguments used in the paper run}
+Table~\ref{tab:aqngargs} records the optimizer and experiment arguments preserved by the run manifest and per-seed configuration files.
+\begin{table*}
+\caption{Arguments of the AQNG benchmark instance.  ``Role'' describes how each argument enters the construction or experimental protocol.}
+\label{tab:aqngargs}
+\begin{ruledtabular}
+\begin{tabular}{lll}
+Argument & Paper value & Role\\
+\hline
+\texttt{n\_qubits} & 6 & Circuit width; gives 21 $Z_{\le2}$ readout features\\
+\texttt{n\_layers} & 3 & Variational circuit depth parameter\\
+\texttt{steps} & 20 & Number of parameter updates\\
+\texttt{learning\_rate} / \texttt{lr} & 0.03 & $\eta$ in Eq.~\eqref{eq:app-update}\\
+\texttt{damping} / \texttt{lam} & $10^{-3}$ & Tikhonov damping $\lambda$\\
+\texttt{rcond} & $10^{-8}$ & Pseudoinverse/SVD relative cutoff\\
+\texttt{loss\_batch} & 8 & Examples used for each loss gradient\\
+\texttt{metric\_batch} & 4 & Examples averaged in each metric refresh\\
+\texttt{metric\_every} & 2 & Rebuild metric every second optimization step\\
+\texttt{readout} & $Z_{\le2}$ & All $Z_i$ and $Z_iZ_j$ retained observables\\
+\texttt{n\_samples} & 80 & Dataset subset size used in each benchmark\\
+\texttt{subset\_seed} & 1729 & Fixed seed selecting the dataset subset\\
+\texttt{split\_seed} & 314159 & Fixed train/test split seed\\
+\texttt{seed} & 0--19 & Initialization, minibatch schedule, and fixed Haar instance\\
+\end{tabular}
+\end{ruledtabular}
+\end{table*}
+The stochastic seed does \emph{not} change the train/test split.  It controls parameter initialization, minibatch scheduling, and, for \texttt{su2\_haar}, the fixed Haar entangling instance.  Thus the 20 repetitions probe training/circuit stochasticity on one fixed split per dataset.
+
+\subsection{Reference algorithm}
+The complete AQNG iteration can be summarized as follows:
+\begin{enumerate}
+ \item Fix the retained observable family $\mathcal A_{\le2}$ and initialize $\bm\theta_0$.
+ \item At step $t$, draw the paired loss minibatch $B_L$ and evaluate $\bm g_t=\nabla L(\bm\theta_t;B_L)$.
+ \item If $t$ is a refresh step, draw $B_G$; for every $x\in B_G$, evaluate $\bm m(x,\bm\theta_t)$, $J_x$, and $\Sigma_x$, then form $G_A(x)=J_x^{\mathsf T}\Sigma_x^+J_x$ and average the four matrices.  Otherwise reuse the preceding $\widehat G_A$.
+ \item Solve $(\widehat G_A+\lambda I)\bm d_t=\bm g_t$ using the stated numerical cutoff.
+ \item Update $\bm\theta_{t+1}=\bm\theta_t-\eta\bm d_t$.
+\end{enumerate}
+Full QNG follows the same loss minibatches, metric minibatch size, refresh cadence, damping, and learning rate, but replaces $\widehat G_A$ by the full pure-state QFIM.  This pairing is why the initial gradient is identical up to floating-point precision and why differences can be attributed to the preconditioning geometry rather than to a different stochastic workload.
+
+\subsection{Diagnostics and consistency checks}
+At the initial paired point the implementation additionally constructs $G_{A_1}$, $G_{\rm local}$, $G_{\le2}$, and $G_Q$.  It records their ranks and traces, the ratios $\Tr(G_{\mathcal A})/\Tr(G_Q)$, and the cosine between each preconditioned direction and the full-QNG direction.  It also checks the nested Loewner ordering
+\begin{equation}
+ G_{A_1}\preceq G_{\rm local}\preceq G_{\le2}\preceq G_Q.
+\end{equation}
+The production run used a scale-aware numerical validation tolerance of order $10^{-5}$ in the pre-run smoke gate.  The largest observed nesting residual was $8.706\times10^{-6}$ in Wine/$U(1)$; no training datum or terminal statistic was modified during reaggregation.
+
+\subsection{Scope of the implementation description}
+The equations above specify the accessible metric and all numerical arguments recorded for the reported run.  They should not be read as requiring diagonal Pauli readout in general.  For a different measurement/readout interface, $\bm m$, $J$, and $\Sigma$ are replaced by the corresponding retained score coordinates; the abstract construction remains the pullback of the accessible tangent map.  Likewise, \texttt{metric\_batch}, \texttt{metric\_every}, $\lambda$, and \texttt{rcond} are numerical hyperparameters rather than defining properties of AQNG itself.
