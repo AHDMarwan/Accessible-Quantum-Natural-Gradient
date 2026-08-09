@@ -1,0 +1,50 @@
+\section{Experimental design}
+\subsection{Benchmarks and circuits}
+We use four binary classification benchmarks: Iris, Breast Cancer, Wine, and Digits. Each experiment uses a fixed train/test split per dataset while the stochastic circuit/training seed is varied. The benchmark configuration uses six qubits, 80 samples, three variational layers, and 20 training steps. Four circuit families are compared: \texttt{ryrz\_cz}, \texttt{su2\_cnot}, \texttt{su2\_haar}, and the number-conserving \texttt{u1\_rzxy}. The $U(1)$ family is retained as a symmetry-constrained control because previous accessibility calculations show that its tangent orientation differs strongly from generic isotropic behavior \cite{AitHaddouRank,AitHaddouSpectral}.
+
+\subsection{Optimization protocol}
+AQNG and full QNG use learning rate $\eta=0.03$ and damping $\lambda=10^{-3}$. The loss minibatch contains eight examples, the metric minibatch contains four, and the metric is refreshed every two optimization steps. Each dataset--architecture cell contains 20 paired seeds, yielding $4\times4\times20=320$ paired comparisons and 640 terminal method rows. The initial loss gradient is shared within each pair; the recorded initial-gradient cosine is numerically unity.
+
+\subsection{Statistics and timing}
+For each cell we report mean test loss and accuracy over 20 seeds. Paired loss differences are $\Delta L=L_{\rm AQNG}-L_{\rm QNG}$, so negative values favor AQNG. Two-sided Wilcoxon signed-rank tests are corrected across the 16 cells by Holm's procedure. Wall-clock measurements refer only to the implemented simulator stack. The AQNG and full-QNG metric paths use different simulator backends in the present implementation while the loss path is shared; timing is therefore an implementation result, not an intrinsic quantum-resource claim.
+
+\section{Results}
+\subsection{Predictive performance}
+Excluding the symmetry-constrained $U(1)$ control, AQNG improves mean test accuracy in nine of twelve dataset--architecture cells (Table~\ref{tab:acc}). The result is not universal: RyRz-CZ favors full QNG on Iris and Digits, and SU(2)-CNOT is essentially tied on Breast Cancer. This heterogeneity supports an architecture-dependent accessible-geometry picture rather than a claim of universal optimizer dominance.
+
+\begin{table*}
+\caption{Mean test accuracy over 20 paired seeds. Values are percentages. $\Delta$ is AQNG minus full QNG in percentage points.}
+\label{tab:acc}
+\begin{ruledtabular}
+\begin{tabular}{llrrr}
+Dataset & Architecture & AQNG & Full QNG & $\Delta$\\\hline
+Iris & RyRz-CZ & 70.75 & 75.75 & -5.00\\
+Iris & SU(2)-CNOT & 86.50 & 79.25 & +7.25\\
+Iris & SU(2)-Haar & 95.50 & 87.25 & +8.25\\
+Breast Cancer & RyRz-CZ & 67.25 & 56.00 & +11.25\\
+Breast Cancer & SU(2)-CNOT & 62.00 & 62.50 & -0.50\\
+Breast Cancer & SU(2)-Haar & 68.50 & 58.75 & +9.75\\
+Wine & RyRz-CZ & 69.75 & 52.25 & +17.50\\
+Wine & SU(2)-CNOT & 71.25 & 63.50 & +7.75\\
+Wine & SU(2)-Haar & 77.50 & 67.75 & +9.75\\
+Digits & RyRz-CZ & 54.50 & 65.75 & -11.25\\
+Digits & SU(2)-CNOT & 79.75 & 69.50 & +10.25\\
+Digits & SU(2)-Haar & 81.75 & 77.50 & +4.25\\
+\end{tabular}
+\end{ruledtabular}
+\end{table*}
+
+The strongest architecture-wide pattern is SU(2)-Haar: AQNG improves mean test accuracy on all four datasets. Its paired loss improvement remains significant after Holm correction on Iris ($p_{\rm Holm}=9.84\times10^{-4}$) and Wine ($p_{\rm Holm}=7.08\times10^{-3}$). Digits/SU(2)-CNOT is also significant after correction ($p_{\rm Holm}=1.47\times10^{-3}$), with mean paired loss difference $-0.232$ and mean accuracy gain 10.25 percentage points. Breast Cancer/RyRz-CZ and Breast Cancer/SU(2)-Haar favor AQNG in mean loss and accuracy but do not remain significant after Holm correction.
+
+\subsection{Accessible Fisher mass and optimization utility}
+Successful AQNG behavior does not require retaining most of the full-QFIM trace. For SU(2)-Haar, the $\le2$ accessible metric retains approximately 0.263, 0.262, 0.268, and 0.267 of QFIM trace on Breast Cancer, Digits, Iris, and Wine, respectively. The corresponding AQNG/full-QNG update-direction cosines are approximately 0.689, 0.668, 0.635, and 0.710. A full-QFIM trace measures total local state-space sensitivity, whereas the optimizer uses an inverse metric acting on a particular loss gradient. Removing Fisher mass poorly aligned with the retained learning interface need not remove useful preconditioning structure.
+
+The nested diagnostics verify the Loewner hierarchy to floating-point tolerance for generic circuits. The largest residual in the complete run is $8.706\times10^{-6}$ for Wine/$U(1)$, below the scale-aware $10^{-5}$ tolerance used by the pre-run smoke validation but above an inconsistent fixed $2\times10^{-6}$ tolerance in the original aggregation script. Reaggregation changed no training data or statistics.
+
+\subsection{Symmetry-constrained control}
+The $U(1)$ architecture produces a qualitatively different regime. AQNG and full QNG obtain exactly the same mean test accuracy, with zero seedwise standard deviation, on all four tasks: 50\% on Iris, 35\% on Breast Cancer, 45\% on Wine, and 50\% on Digits. At the same time, mean AQNG/full-QNG direction cosines are 0.912, 0.858, 0.921, and 0.932. The failure therefore cannot be attributed simply to a poor approximation of the full natural-gradient direction.
+
+This observation must be interpreted together with the preceding spectral theory. The earlier $U(1)$ result is not that low-order information is absent. Symmetry can instead concentrate tangent covariance and enhance alignment with low-weight readouts \cite{AitHaddouSpectral}. The present experiment establishes a different distinction: measurement accessibility is not identical to supervised-task discriminativeness. An accessible tangent direction can be large and can closely reproduce the full-QNG direction while still failing to separate labels under the chosen architecture, encoding, and readout. The $U(1)$ cells show small seed-consistent terminal-loss reductions under AQNG, but because accuracy is unchanged we do not interpret them as practical classification gains.
+
+\subsection{Implementation wall-clock}
+In the present simulator implementation, AQNG reduces mean wall-clock time by roughly 10.8--11.0$\times$ for RyRz-CZ, 38.2--38.7$\times$ for SU(2)-CNOT, 25.7--26.3$\times$ for SU(2)-Haar, and 35.4--36.1$\times$ for $U(1)$. These ratios are stable across datasets. They show that the implemented accessible-metric path is substantially cheaper in this code base, but they do not establish a hardware-independent resource theorem.
