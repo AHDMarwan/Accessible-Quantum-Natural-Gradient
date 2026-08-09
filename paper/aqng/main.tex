@@ -1,0 +1,28 @@
+\documentclass[aps,pra,reprint,superscriptaddress,nofootinbib]{revtex4-2}
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\newcommand{\GQ}{G_{\mathrm Q}}
+\newcommand{\GA}{G_{\mathrm A}}
+\newcommand{\Tr}{\operatorname{Tr}}
+
+\begin{document}
+\title{Accessible Quantum Natural Gradient: Optimizing in the Geometry Seen by the Readout}
+\author{Marwan Ait Haddou}
+\affiliation{Independent Researcher, Morocco}
+\date{\today}
+
+\begin{abstract}
+Quantum natural gradient (QNG) preconditions variational optimization with the full quantum Fisher geometry of a parameterized state, although a learning model generally interacts with that state only through a fixed measurement and a restricted family of retained observables. We introduce the accessible quantum natural gradient (AQNG), an optimization rule obtained by replacing the full state-space metric by the pullback of measurement--readout-accessible tangent geometry. The construction is the algorithmic consequence of the spectral accessibility framework, which separates quantum tangent sensitivity from the fraction exposed by measurement and readout. We compare AQNG with full QNG on four binary classification benchmarks, four six-qubit circuit families, and 20 paired stochastic seeds per dataset--architecture cell, for 640 terminal method rows. For the three nonconserving architectures, AQNG improves mean test accuracy in nine of twelve settings. The strongest behavior occurs for the SU(2)-Haar architecture, where the accessible metric retains only about 26--27\% of the full-QFIM trace while AQNG improves mean accuracy on all four datasets. Holm-corrected paired loss tests remain significant for Iris/SU(2)-Haar, Wine/SU(2)-Haar, and Digits/SU(2)-CNOT. In the implemented simulator stack AQNG reduces wall-clock time by factors of roughly 11--39, although this timing comparison is backend-specific and is not an intrinsic complexity claim. A number-conserving $U(1)$ control remains at fixed chance-like accuracy under both AQNG and full QNG despite high update-direction alignment, showing that fidelity to the full natural-gradient direction is not sufficient when the architecture/readout geometry is not useful for the supervised task. These results distinguish full quantum geometry, measurement-accessible geometry, and task-useful optimization geometry.
+\end{abstract}
+\maketitle
+
+\input{sections/01_introduction}
+\input{sections/02_geometry}
+\input{sections/03_experiments_results}
+\input{sections/04_discussion_conclusion}
+\input{sections/05_appendix_implementation}
+
+\bibliography{references}
+\end{document}
