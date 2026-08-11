@@ -8,6 +8,9 @@ version = "0.6.0"
 description = "Accessible Quantum Natural Gradient optimizer with physical, random, and aligned measurement-aware readouts for PennyLane"
 readme = "README.md"
 requires-python = ">=3.10"
+authors = [
+  {name = "Marwan Ait Haddou", email = "aithaddou.marwan@edu.uca.ac.ma"},
+]
 dependencies = [
   "numpy>=1.24",
   "pennylane>=0.45,<0.46",
@@ -24,6 +27,7 @@ test = ["pytest>=8"]
 
 [project.urls]
 Repository = "https://github.com/AHDMarwan/Accessible-Quantum-Natural-Gradient"
+ORCID = "https://orcid.org/0009-0008-1734-1721"
 SpectralGeometrySource = "https://github.com/AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws"
 
 [tool.setuptools]
