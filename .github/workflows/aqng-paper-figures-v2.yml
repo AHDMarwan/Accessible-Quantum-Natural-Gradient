@@ -1,0 +1,64 @@
+name: AQNG paper v2 figures
+
+on:
+  push:
+    branches: [aqng-paper-draft-v2]
+    paths:
+      - 'experiments/make_paper_figures_v2.py'
+      - 'results/paper/paper_scale_v2/**'
+      - '.github/workflows/aqng-paper-figures-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  figures:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: aqng-paper-draft-v2
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install plotting stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install numpy pandas matplotlib
+          sudo apt-get update
+          sudo apt-get install -y poppler-utils
+
+      - name: Generate figures
+        run: python experiments/make_paper_figures_v2.py
+
+      - name: Verify generated PDF figures render
+        run: |
+          set -euo pipefail
+          mkdir -p /tmp/aqng-figure-renders
+          count=0
+          for f in paper/aqng/figures/generated/*.pdf; do
+            test -s "$f"
+            stem=$(basename "$f" .pdf)
+            pdftoppm -f 1 -singlefile -png -r 120 "$f" "/tmp/aqng-figure-renders/$stem" >/dev/null 2>&1
+            test -s "/tmp/aqng-figure-renders/$stem.png"
+            count=$((count+1))
+          done
+          test "$count" -eq 5
+          test "$(find paper/aqng/figures/generated -maxdepth 1 -name '*.png' | wc -l)" -eq 5
+
+      - name: Commit generated figures
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add paper/aqng/figures/generated
+          if git diff --cached --quiet; then
+            echo 'Figures already up to date.'
+          else
+            git commit -m 'Generate AQNG v2 paper figures'
+            git push origin HEAD:aqng-paper-draft-v2
+          fi
