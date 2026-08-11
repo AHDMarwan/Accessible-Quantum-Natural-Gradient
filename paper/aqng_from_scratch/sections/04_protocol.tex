@@ -1,0 +1,18 @@
+\section{Experimental protocol}
+
+\subsection{Frozen benchmark matrix}
+The paper-scale campaign contains 470 completed experiment cells and 3160 terminal optimizer rows. The primary benchmark is the Cartesian product of four binary datasets (Iris, Breast Cancer, Wine, and binary Digits), four six-qubit circuit families (RyRz--CZ, SU(2)--CNOT, SU(2)--Haar, and a number-conserving $U(1)$ family), and 20 paired stochastic seeds, giving 320 dataset--architecture cells. Each primary cell contains eight optimizers: physical-, random-, and aligned-readout AQNG; an AQNG-$Z_0$ minimal-readout control; full QNG; block QNG; SGD; and Adam.
+
+The auxiliary matrix contains 40 qubit-scaling cells, 30 depth-scaling cells, 40 readout-order cells, and 40 finite-shot cells. Qubit scaling uses SU(2)--Haar and $U(1)$ circuits at $n\in\{4,6,8,10\}$ with five seeds. Depth scaling uses the same two families at depths $L\in\{1,3,5\}$ with five seeds. The readout-order ablation uses Iris and Digits with SU(2)--Haar and $U(1)$, comparing weight-one diagonal readouts with the complete diagonal Pauli span through weight two. Finite-shot experiments use the same two datasets and two circuit families at 1000 and 10000 shots.
+
+After the full matrix had been inspected, a separate follow-up added the missing Euclidean baselines for the larger/deeper SU(2)--Haar settings: Adam and SGD at $(n,L)=(8,3),(10,3),(6,5)$ with the same five paired seeds. This adds 15 experiment cells and 30 terminal baseline rows. Because this extension was specified after the main outcomes were known, we report it explicitly as a follow-up rather than merging it silently into the original frozen design.
+
+\subsection{Shared training controls}
+Within a paired comparison, methods share the same dataset split, circuit family, initialization seed, training budget, and loss definition. The paper-scale runs use 20 optimization steps, a loss minibatch of four samples, a metric minibatch of two samples, and a metric refresh every two steps. The default rank-matched orientation experiment uses a weight-one diagonal readout. Cross-fitted aligned readouts are calibrated on independent tangent samples and then frozen before supervised training.
+
+AQNG orientation methods use learning rate $0.06$ and damping $0.003$ under trace metric normalization and absolute damping. Baseline learning rates were selected in a restricted tuning stage using only Iris/SU(2)--Haar seed 0: $0.10$ for SGD and $0.06$ for Adam; AQNG-$Z_0$ and block-QNG use the same $0.06/0.003$ pair. The tuning stage excludes the $U(1)$ control and does not inspect test outcomes from the paper-scale matrix.
+
+\subsection{Statistical reporting}
+The unit of pairing is the stochastic seed within a fixed dataset--architecture--protocol cell. Primary method comparisons use paired Wilcoxon signed-rank tests and Holm correction over the planned family of comparisons. We report pooled means only as descriptive aggregates unless a corresponding paired test is defined. The large/deep follow-up reports both setting-wise five-seed comparisons and a pooled 15-case paired analysis; the latter is useful as a compact summary but does not replace the setting-wise uncertainty.
+
+All paper-facing tables are regenerated from the committed aggregate files in `results/paper/paper_scale_v2/`. The source paper-scale workflow contains 470 cells, 3160 terminal rows, and 470 calibration rows; the follow-up contains 15 cells and 30 terminal rows. No result in the manuscript is reconstructed from the superseded AQNG draft.
