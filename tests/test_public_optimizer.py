@@ -2,7 +2,7 @@ import numpy as np
 import pytest
 from pennylane import numpy as pnp
 
-from aqng import AQNGOptimizer, ReadoutMode
+from aqng import AQNGConfig, AQNGOptimizer, ReadoutMode
 
 
 def test_public_readout_aliases():
@@ -15,6 +15,20 @@ def test_public_readout_aliases():
 def test_invalid_readout_rejected():
     with pytest.raises(ValueError, match="physical, random, aligned"):
         AQNGOptimizer(readout="unknown")
+
+
+def test_typed_config_constructs_optimizer():
+    config = AQNGConfig(
+        stepsize=0.03,
+        readout="random",
+        lam=2e-3,
+        metric_every=3,
+        max_direction_norm=4.0,
+        readout_order=2,
+        seed=11,
+    )
+    opt = AQNGOptimizer.from_config(config)
+    assert opt.configuration == config
 
 
 def test_fit_and_switch_rank_matched_readouts():
@@ -67,6 +81,35 @@ def test_standalone_calibrate_from_probability_callable():
 
     random_design = opt.set_readout("random").readout_design
     assert random_design.rank == design.rank
+
+
+def test_state_roundtrip_restores_config_and_readouts(tmp_path):
+    params = pnp.array([0.17, -0.23], requires_grad=True)
+    config = AQNGConfig(
+        stepsize=0.02,
+        readout="aligned",
+        lam=1e-2,
+        metric_every=1,
+        readout_order=1,
+        seed=5,
+    )
+    opt = AQNGOptimizer.from_config(config, probability_fn=_probability_fn)
+    design = opt.calibrate(params, 0.7, n_qubits=2, n_directions=12)
+
+    path = tmp_path / "optimizer.aqng"
+    opt.save(path)
+    restored = AQNGOptimizer.load(path, probability_fn=_probability_fn)
+
+    assert restored.configuration == config
+    assert restored.readout_design.name == design.name
+    assert restored.readout_design.rank == design.rank
+    np.testing.assert_allclose(restored.readout_design.basis, design.basis)
+    np.testing.assert_allclose(
+        restored.readout_design.outcome_features, design.outcome_features
+    )
+
+    restored.set_readout("physical")
+    assert restored.readout_design.name == "physical"
 
 
 def test_standalone_step_accepts_separate_metric_args():
