@@ -7,7 +7,9 @@ from typing import Mapping, Optional, Sequence
 import numpy as np
 
 from .calibration import calibration_score_rows
+from .config import AQNGConfig
 from .optimizer import AQNGOptimizer as _BaseAQNGOptimizer, ReadoutMode
+from .state import load_optimizer_state, save_optimizer_state
 
 
 class AQNGOptimizer(_BaseAQNGOptimizer):
@@ -22,6 +24,34 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
     Pass ``metric_args`` / ``metric_kwargs`` to a step when the metric minibatch
     differs from the objective minibatch.
     """
+
+    @classmethod
+    def from_config(cls, config: AQNGConfig, *, probability_fn=None) -> "AQNGOptimizer":
+        """Construct an optimizer from a typed, serializable configuration."""
+        values = config.to_dict()
+        return cls(probability_fn=probability_fn, **values)
+
+    @property
+    def configuration(self) -> AQNGConfig:
+        """Return the current public optimizer configuration."""
+        core = self._core
+        return AQNGConfig(
+            stepsize=core.stepsize,
+            readout=self.readout_name,
+            lam=core.lam,
+            cov_lam=core.cov_lam,
+            metric_every=core.metric_every,
+            adaptive_refresh=core.adaptive_refresh,
+            refresh_direction_growth=core.refresh_direction_growth,
+            max_direction_norm=core.max_direction_norm,
+            max_metric_step=core.max_metric_step,
+            solver=core.solver,
+            rcond=core.rcond,
+            project_cov_psd=core.project_cov_psd,
+            reduction=core.reduction,
+            seed=self.seed,
+            readout_order=self.readout_order,
+        )
 
     def calibrate(
         self,
@@ -74,6 +104,30 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         )
 
     fit = calibrate
+
+    def save(self, path):
+        """Persist hyperparameters and calibrated readouts without pickling callables.
+
+        The probability/objective functions and cached metric tensor are not
+        serialized. Supply a compatible ``probability_fn`` when loading if the
+        restored optimizer will compute AQNG metrics.
+        """
+        return save_optimizer_state(
+            path,
+            config=self.configuration.to_dict(),
+            readout=self.readout_name,
+            designs=self._designs,
+        )
+
+    @classmethod
+    def load(cls, path, *, probability_fn=None) -> "AQNGOptimizer":
+        """Restore an optimizer configuration and calibrated readout designs."""
+        metadata, designs = load_optimizer_state(path)
+        config = AQNGConfig.from_dict(metadata["config"])
+        optimizer = cls.from_config(config, probability_fn=probability_fn)
+        if designs:
+            optimizer.bind_readout_designs(designs)
+        return optimizer
 
     def _metric_functions_for_step(
         self,
@@ -160,4 +214,4 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         )
 
 
-__all__ = ["AQNGOptimizer", "ReadoutMode"]
+__all__ = ["AQNGOptimizer", "AQNGConfig", "ReadoutMode"]
