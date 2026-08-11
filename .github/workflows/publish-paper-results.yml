@@ -1,0 +1,93 @@
+name: Publish AQNG paper results
+
+on:
+  push:
+    branches: [aqng-adam-sgd-scaling-followup]
+    paths:
+      - 'experiments/package_paper_results.py'
+      - '.github/workflows/publish-paper-results.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: aqng-adam-sgd-scaling-followup
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+
+      - name: Install analysis stack
+        run: pip install pandas numpy scipy
+
+      - name: Download completed paper-scale artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          rm -rf downloads
+          mkdir -p downloads/base downloads/followup
+          gh run download 31480796466 \
+            --repo AHDMarwan/Accessible-Quantum-Natural-Gradient \
+            --name aqng-paper-large-scale-summary \
+            --dir downloads/base
+          gh run download 31522334431 \
+            --repo AHDMarwan/Accessible-Quantum-Natural-Gradient \
+            --dir downloads/followup
+
+      - name: Build complete durable result package
+        run: |
+          python experiments/package_paper_results.py \
+            --base-dir downloads/base \
+            --followup-dir downloads/followup \
+            --output-dir results/paper/paper_scale_v2
+
+      - name: Fix paper-block reporting parser
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          p = Path('experiments/analyze_paper_scale.py')
+          s = p.read_text()
+          old = '        if f"paper-{name}" in tag:\n            return name\n'
+          new = '        if f"paper-run-{name}-" in tag or f"paper-{name}-" in tag:\n            return name\n'
+          if old in s:
+              p.write_text(s.replace(old, new))
+          elif new not in s:
+              raise SystemExit('unexpected _block_from_tag implementation')
+          PY
+
+      - name: Verify completeness
+        run: |
+          python - <<'PY'
+          import json
+          d=json.load(open('results/paper/paper_scale_v2/report.json'))
+          got=d['completeness']; exp=d['expected']
+          assert got['paper_scale_cells']==470
+          assert got['paper_scale_terminal_rows']==3160
+          assert got['paper_scale_calibration_rows']==470
+          for key in ['primary_cells','scaling_cells','depth_cells','order_cells','finite_cells','followup_cells']:
+              assert got[key]==exp[key], (key,got[key],exp[key])
+          assert got['followup_terminal_rows']==30
+          print(json.dumps(got,indent=2))
+          PY
+
+      - name: Commit result package
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add experiments/analyze_paper_scale.py results/paper/paper_scale_v2
+          if git diff --cached --quiet; then
+            echo 'Result package already current.'
+            exit 0
+          fi
+          git commit -m 'Publish complete frozen AQNG paper results'
+          git push origin HEAD:aqng-adam-sgd-scaling-followup
