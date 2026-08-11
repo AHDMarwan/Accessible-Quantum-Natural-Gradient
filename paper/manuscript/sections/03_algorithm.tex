@@ -7,7 +7,7 @@ Given a supervised loss $L(\bm\theta)$ with Euclidean gradient $g=\nabla_{\bm\th
  \bm\theta\leftarrow\bm\theta-\eta d_{\rm A}.
  \label{eq:aqng_update}
 \end{equation}
-The full-QNG control replaces $\widehat G_{\rm acc}$ by the full QFIM. In the implementation, the accessible metric can be factorized as $A^{\mathsf T}A$, allowing primal, dual, or SVD-based solves depending on parameter and readout dimensions. Metric evaluations are cached for a fixed number of optimization steps to separate metric-construction cost from the loss-gradient loop.
+The full-QNG control uses the full quantum metric instead, following quantum natural-gradient optimization \cite{Stokes2020}. From Eq.~\eqref{eq:projection_identity}, $G_{\rm acc}=(P_BS)^{\mathsf T}(P_BS)$, so the accessible metric admits the explicit Gram factorization $A^{\mathsf T}A$ with $A=P_BS$. This factorization permits primal, dual, or SVD-based linear solves depending on parameter and retained-score dimensions. Metric evaluations are cached for a fixed number of optimization steps as an implementation choice.
 
 \begin{figure*}[t]
 \centering
@@ -32,7 +32,7 @@ The full-QNG control replaces $\widehat G_{\rm acc}$ by the full QFIM. In the im
 \end{figure*}
 
 \subsection{Metric normalization and damping}
-Comparisons between metrics with different overall scales are otherwise confounded by damping. The primary configuration therefore normalizes each metric by its trace before applying a common absolute damping coefficient. Additional controls use no normalization or maximum-eigenvalue normalization and alternative damping conventions based on the mean or maximum eigenvalue. We also impose a Euclidean direction cap and an accessible-metric trust radius. These controls prevent a nearly singular metric from converting a small gradient into an arbitrarily large parameter step. Consequently, update magnitude is not used as evidence that a vanishing-gradient problem has been solved.
+Metric scale and damping cannot be varied independently: replacing $G$ by $cG$ while holding $\lambda$ fixed changes $(cG+\lambda I)^{-1}$ in a direction-dependent way unless $\lambda$ is rescaled with $c$. The primary configuration therefore normalizes each metric by its trace before applying a common absolute damping coefficient. Additional controls use no normalization or maximum-eigenvalue normalization and alternative damping conventions based on the mean or maximum eigenvalue. We also impose a Euclidean direction cap and an accessible-metric trust radius. These controls bound the accepted update when the estimated metric is nearly singular; consequently, update magnitude alone is not treated as evidence that a vanishing-gradient problem has been solved.
 
 \subsection{Rank-matched readout designs}
 The primary readout comparison keeps rank fixed and changes only orientation. The physical readout is the local computational-basis $Z$ span. A random control draws a subspace of exactly the same rank from the centered outcome-function space. The aligned control is fit from an independent calibration set of tangent scores: the leading rank-matched score directions are estimated on calibration tangents and then frozen before optimization and evaluation. Labels are not used in this calibration step. This cross-fit construction avoids evaluating an aligned subspace on the same tangent sample used to fit it.
