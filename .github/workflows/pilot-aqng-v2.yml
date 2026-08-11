@@ -1,0 +1,189 @@
+name: AQNG v2 small pilot
+
+on:
+  push:
+    branches:
+      - aqng-v2-orientation-controls
+    paths:
+      - 'experiments/pilot_aqng_v2.py'
+      - '.github/workflows/pilot-aqng-v2.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+  OMP_NUM_THREADS: '2'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+
+jobs:
+  pilot:
+    name: ${{ matrix.tag }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - tag: analytic-haar-s0
+            family: su2_haar
+            seed: 0
+            steps: 6
+            shot_args: ''
+          - tag: analytic-haar-s1
+            family: su2_haar
+            seed: 1
+            steps: 6
+            shot_args: ''
+          - tag: analytic-u1-s0
+            family: u1_rzxy
+            seed: 0
+            steps: 6
+            shot_args: ''
+          - tag: analytic-u1-s1
+            family: u1_rzxy
+            seed: 1
+            steps: 6
+            shot_args: ''
+          - tag: shots1k-haar-s0
+            family: su2_haar
+            seed: 0
+            steps: 4
+            shot_args: '--shots 1000 --finite-shot-calibration --cov-lam 1e-3'
+          - tag: shots10k-haar-s0
+            family: su2_haar
+            seed: 0
+            steps: 4
+            shot_args: '--shots 10000 --finite-shot-calibration --cov-lam 1e-3'
+          - tag: shots1k-u1-s0
+            family: u1_rzxy
+            seed: 0
+            steps: 4
+            shot_args: '--shots 1000 --finite-shot-calibration --cov-lam 1e-3'
+          - tag: shots10k-u1-s0
+            family: u1_rzxy
+            seed: 0
+            steps: 4
+            shot_args: '--shots 10000 --finite-shot-calibration --cov-lam 1e-3'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install AQNG experiment stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[experiments]"
+      - name: Run targeted pilot
+        shell: bash
+        run: |
+          python experiments/pilot_aqng_v2.py \
+            --family '${{ matrix.family }}' \
+            --dataset iris01 \
+            --seed '${{ matrix.seed }}' \
+            --n-qubits 6 \
+            --n-layers 3 \
+            --n-samples 60 \
+            --steps '${{ matrix.steps }}' \
+            --loss-batch 4 \
+            --metric-batch 2 \
+            --metric-every 2 \
+            --readout-order 1 \
+            --alignment-batch 4 \
+            --alignment-tangents 32 \
+            --alignment-eval-tangents 32 \
+            --metric-normalization trace \
+            --damping-mode absolute \
+            --max-direction-norm 8 \
+            --max-metric-step 0.25 \
+            ${{ matrix.shot_args }} \
+            --output-dir 'pilot_outputs/${{ matrix.tag }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pilot-${{ matrix.tag }}
+          path: pilot_outputs/${{ matrix.tag }}
+          retention-days: 14
+
+  summarize:
+    name: summarize pilot
+    runs-on: ubuntu-latest
+    needs: pilot
+    if: always()
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: pilot-*
+          path: downloaded
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aggregate successful pilot outputs
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import csv
+          import json
+
+          root = Path('downloaded')
+          result_rows = []
+          calibration_rows = []
+          orientation_rows = []
+
+          def read_csv(path):
+              with path.open(newline='', encoding='utf-8') as f:
+                  return list(csv.DictReader(f))
+
+          for p in root.rglob('results_*.csv'):
+              tag = p.parents[1].name.removeprefix('pilot-') if len(p.parents) > 1 else p.parent.name
+              for row in read_csv(p):
+                  row['pilot_tag'] = tag
+                  result_rows.append(row)
+          for p in root.rglob('calibration_diags_*.csv'):
+              tag = p.parents[1].name.removeprefix('pilot-') if len(p.parents) > 1 else p.parent.name
+              for row in read_csv(p):
+                  row['pilot_tag'] = tag
+                  calibration_rows.append(row)
+          for p in root.rglob('orientation_diags_*.csv'):
+              tag = p.parents[1].name.removeprefix('pilot-') if len(p.parents) > 1 else p.parent.name
+              for row in read_csv(p):
+                  row['pilot_tag'] = tag
+                  orientation_rows.append(row)
+
+          out = Path('pilot_summary')
+          out.mkdir(exist_ok=True)
+
+          def write_csv(name, rows):
+              path = out / name
+              if not rows:
+                  path.write_text('', encoding='utf-8')
+                  return
+              keys = []
+              seen = set()
+              for row in rows:
+                  for k in row:
+                      if k not in seen:
+                          seen.add(k); keys.append(k)
+              with path.open('w', newline='', encoding='utf-8') as f:
+                  w = csv.DictWriter(f, fieldnames=keys)
+                  w.writeheader(); w.writerows(rows)
+
+          write_csv('results_all.csv', result_rows)
+          write_csv('calibration_all.csv', calibration_rows)
+          write_csv('orientation_all.csv', orientation_rows)
+          (out / 'manifest.json').write_text(json.dumps({
+              'result_rows': len(result_rows),
+              'calibration_rows': len(calibration_rows),
+              'orientation_rows': len(orientation_rows),
+              'artifact_dirs': sorted(p.name for p in root.iterdir() if p.is_dir()),
+          }, indent=2), encoding='utf-8')
+          print((out / 'manifest.json').read_text())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aqng-v2-small-pilot-summary
+          path: pilot_summary
+          retention-days: 14
