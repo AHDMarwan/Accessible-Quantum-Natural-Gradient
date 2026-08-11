@@ -68,6 +68,10 @@ def stable_builder(bundle, theta0, X_train, cfg):
     N = designs["physical"].centered_dimension
     baseline = rank / N
     diag = {
+        "n_qubits": int(cfg.n_qubits),
+        "n_layers": int(cfg.n_layers),
+        "readout_order": int(cfg.readout_order),
+        "shots": cfg.shots,
         "alignment_ids": ids.tolist(),
         "alignment_tangents": int(cfg.alignment_tangents),
         "alignment_eval_tangents": int(cfg.alignment_eval_tangents),
@@ -170,6 +174,11 @@ def install_validation_hooks(*, paired_shot_streams: bool):
         diag = _first_step_task_diag(method, cfg, data, batches, designs, bundle.family)
         out = _ORIGINAL_TRAIN(bundle, method, cfg, data, batches, designs)
         out["result"].update(diag)
+        out["result"].update(
+            readout_order=int(cfg.readout_order),
+            suite=str(cfg.suite),
+            finite_shot_calibration=bool(cfg.finite_shot_calibration),
+        )
         return out
 
     v2.train_method = train_with_diag
