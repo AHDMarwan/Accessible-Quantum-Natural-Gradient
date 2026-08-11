@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from typing import Optional
+from typing import Mapping, Optional, Sequence
 
 import numpy as np
 
@@ -14,9 +14,13 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
     """High-level AQNG optimizer with automatic readout calibration.
 
     The optimizer can be used without manually constructing ``feature_fn`` and
-    ``covariance_fn``.  Bind a differentiable computational-basis probability
+    ``covariance_fn``. Bind a differentiable computational-basis probability
     callable, calibrate the readout from unlabeled calibration inputs, then call
     :meth:`step` or :meth:`step_and_cost`.
+
+    The supervised objective and the AQNG metric may consume different data.
+    Pass ``metric_args`` / ``metric_kwargs`` to a step when the metric minibatch
+    differs from the objective minibatch.
     """
 
     def calibrate(
@@ -36,31 +40,10 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
     ):
         """Calibrate and bind physical/random/aligned readouts from ``probability_fn``.
 
-        Parameters
-        ----------
-        params
-            Parameter point at which calibration probabilities and Jacobians are
-            evaluated.
-        calibration_args, calibration_kwargs
-            Unlabeled inputs forwarded to ``probability_fn``.  The callable may
-            return one probability vector ``(D,)`` or a batch ``(B,D)``.
-        n_qubits
-            Number of measured qubits, used to construct the physical low-weight
-            diagonal readout family.
-        directions
-            Optional tangent directions in flattened parameter coordinates.  If
-            omitted, ``n_directions`` isotropic unit directions are generated.
-        n_directions
-            Number of random calibration directions when ``directions`` is omitted.
-        reference_probabilities
-            Optional fixed reference distribution for the common score space.
-            By default the mean calibration distribution is used.
-
-        Notes
-        -----
-        Calibration is label-free.  For ``readout='aligned'`` the caller should
-        provide calibration inputs independent of the supervised minibatch used
-        for optimization/evaluation.
+        ``calibration_args`` and ``calibration_kwargs`` are forwarded only to the
+        probability callable. Calibration is label-free. For ``readout='aligned'``
+        the calibration inputs should be independent of the supervised minibatch
+        used for optimization/evaluation.
         """
         if self.probability_fn is None:
             raise RuntimeError(
@@ -91,6 +74,90 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         )
 
     fit = calibrate
+
+    def _metric_functions_for_step(
+        self,
+        metric_args: Optional[Sequence[object]],
+        metric_kwargs: Optional[Mapping[str, object]],
+    ):
+        if self._feature_fn is None or self._covariance_fn is None:
+            raise RuntimeError(
+                "AQNG metric functions are not bound. Provide probability_fn and "
+                "call calibrate()/fit_readout(), or bind custom metric functions."
+            )
+        if metric_args is None and metric_kwargs is None:
+            return self._feature_fn, self._covariance_fn
+
+        m_args = tuple(() if metric_args is None else metric_args)
+        m_kwargs = dict({} if metric_kwargs is None else metric_kwargs)
+        feature_base = self._feature_fn
+        covariance_base = self._covariance_fn
+
+        def feature_fn(params, *_objective_args, **_objective_kwargs):
+            return feature_base(params, *m_args, **m_kwargs)
+
+        def covariance_fn(params, *_objective_args, **_objective_kwargs):
+            return covariance_base(params, *m_args, **m_kwargs)
+
+        return feature_fn, covariance_fn
+
+    def step(
+        self,
+        objective_fn,
+        params,
+        *objective_args,
+        metric_args: Optional[Sequence[object]] = None,
+        metric_kwargs: Optional[Mapping[str, object]] = None,
+        grad_fn=None,
+        recompute_metric: Optional[bool] = None,
+        **objective_kwargs,
+    ):
+        """Perform one AQNG update.
+
+        By default the probability/readout metric receives the same arguments as
+        ``objective_fn``. Set ``metric_args`` and/or ``metric_kwargs`` to use a
+        distinct metric minibatch while leaving the supervised objective call
+        unchanged.
+        """
+        feature_fn, covariance_fn = self._metric_functions_for_step(
+            metric_args, metric_kwargs
+        )
+        return self._core.step(
+            objective_fn,
+            params,
+            *objective_args,
+            feature_fn=feature_fn,
+            covariance_fn=covariance_fn,
+            grad_fn=grad_fn,
+            recompute_metric=recompute_metric,
+            **objective_kwargs,
+        )
+
+    def step_and_cost(
+        self,
+        objective_fn,
+        params,
+        *objective_args,
+        metric_args: Optional[Sequence[object]] = None,
+        metric_kwargs: Optional[Mapping[str, object]] = None,
+        grad_fn=None,
+        recompute_metric: Optional[bool] = None,
+        **objective_kwargs,
+    ):
+        """Perform one update and return ``(new_params, objective_before_step)``."""
+        feature_fn, covariance_fn = self._metric_functions_for_step(
+            metric_args, metric_kwargs
+        )
+        return self._core.step_and_cost(
+            objective_fn,
+            params,
+            *objective_args,
+            feature_fn=feature_fn,
+            covariance_fn=covariance_fn,
+            grad_fn=grad_fn,
+            recompute_metric=recompute_metric,
+            **objective_kwargs,
+        )
 
 
 __all__ = ["AQNGOptimizer", "ReadoutMode"]
