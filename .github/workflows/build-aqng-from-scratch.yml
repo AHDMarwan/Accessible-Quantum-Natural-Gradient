@@ -1,0 +1,32 @@
+name: Build clean AQNG manuscript
+
+on:
+  push:
+    branches:
+      - aqng-paper-from-scratch
+    paths:
+      - 'paper/aqng_from_scratch/**'
+      - '.github/workflows/build-aqng-from-scratch.yml'
+  pull_request:
+    paths:
+      - 'paper/aqng_from_scratch/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compile fresh REVTeX manuscript
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: main.tex
+          working_directory: paper/aqng_from_scratch
+      - name: Upload PDF
+        uses: actions/upload-artifact@v4
+        with:
+          name: aqng-from-scratch-pdf
+          path: paper/aqng_from_scratch/main.pdf
