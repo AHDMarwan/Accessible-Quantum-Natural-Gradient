@@ -1,0 +1,872 @@
+[
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 5,
+      "n_qubits": 6,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 0,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-depth-su2_haar-L5-s0"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 5,
+      "n_qubits": 6,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 1,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-depth-su2_haar-L5-s1"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 5,
+      "n_qubits": 6,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 2,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-depth-su2_haar-L5-s2"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 5,
+      "n_qubits": 6,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 3,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-depth-su2_haar-L5-s3"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 5,
+      "n_qubits": 6,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 4,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-depth-su2_haar-L5-s4"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 10,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 0,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n10-s0"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 10,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 1,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n10-s1"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 10,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 2,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n10-s2"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 10,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 3,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n10-s3"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 10,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 4,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n10-s4"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 8,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 0,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n8-s0"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 8,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 1,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n8-s1"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 8,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 2,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n8-s2"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 8,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 3,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n8-s3"
+  },
+  {
+    "aligned_crossfit": "fitted from label-free calibration inputs and independent tangent directions; held-out tangent directions are used for retention diagnostics",
+    "config": {
+      "adam_beta1": 0.9,
+      "adam_beta2": 0.999,
+      "adam_eps": 1e-08,
+      "alignment_batch": 4,
+      "alignment_eval_tangents": 64,
+      "alignment_tangents": 64,
+      "cov_lam": 0.0,
+      "damping_mode": "absolute",
+      "dataset": "iris01",
+      "finite_shot_calibration": false,
+      "lam": 0.003,
+      "lam_overrides": [],
+      "loss_batch": 4,
+      "lr": 0.06,
+      "lr_overrides": [
+        [
+          "SGD",
+          0.1
+        ],
+        [
+          "Adam",
+          0.06
+        ]
+      ],
+      "max_direction_norm": 8.0,
+      "max_metric_step": 0.25,
+      "metric_batch": 2,
+      "metric_every": 2,
+      "metric_normalization": "trace",
+      "n_layers": 3,
+      "n_qubits": 8,
+      "n_samples": 60,
+      "rcond": 1e-08,
+      "readout_order": 1,
+      "seed": 4,
+      "shots": null,
+      "steps": 20,
+      "suite": "full"
+    },
+    "finite_shot_semantics": "with --shots, AQNG probability metrics and loss gradients are finite-shot parameter-shift estimates; Full-QNG and Block-QNG are analytic oracle metrics; terminal evaluation is analytic",
+    "github_run_id": "31522334431",
+    "github_sha": "cee2b76a0e03ec7d4611e0a2c7329ea4fb2bd07e",
+    "methods": [
+      "SGD",
+      "Adam"
+    ],
+    "numpy": "2.4.6",
+    "orientation_control": "physical/random/aligned readouts have the same covariance rank and are constructed in one reference-mixture computational-basis score space",
+    "pennylane": "0.45.1",
+    "python": "3.11.15",
+    "source_geometry_repository": "AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws",
+    "split_seed": 314159,
+    "subset_seed": 1729,
+    "source_artifact": "paper-run-baselines-scaling-su2_haar-n8-s4"
+  }
+]
