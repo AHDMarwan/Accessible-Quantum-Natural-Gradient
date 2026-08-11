@@ -2,6 +2,7 @@ name: AQNG paper large-scale experiments
 
 on:
   pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
     paths:
       - 'aqng_validation.py'
       - 'experiments/aqng_validation_gate.py'
@@ -109,6 +110,7 @@ jobs:
           retention-days: 90
 
   primary_a:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     needs: [smoke, tune_baselines]
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -150,6 +152,7 @@ jobs:
           retention-days: 90
 
   primary_b:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     needs: [smoke, tune_baselines]
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -191,6 +194,7 @@ jobs:
           retention-days: 90
 
   scaling:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     needs: smoke
     runs-on: ubuntu-latest
     timeout-minutes: 180
@@ -226,6 +230,7 @@ jobs:
           retention-days: 90
 
   depth:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     needs: smoke
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -261,6 +266,7 @@ jobs:
           retention-days: 90
 
   order:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     needs: smoke
     runs-on: ubuntu-latest
     timeout-minutes: 120
@@ -297,6 +303,7 @@ jobs:
           retention-days: 90
 
   finite:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
     needs: smoke
     runs-on: ubuntu-latest
     timeout-minutes: 150
@@ -335,8 +342,8 @@ jobs:
           retention-days: 90
 
   summarize:
+    if: always() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false)
     needs: [primary_a, primary_b, scaling, depth, order, finite, tune_baselines]
-    if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
