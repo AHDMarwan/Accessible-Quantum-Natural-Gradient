@@ -8,21 +8,26 @@ G_{\rm acc}=\frac1B\sum_{b=1}^B J_b^T\Sigma_b^{+}J_b.
 
 Target API: PennyLane `0.45.x`, using the `pennylane.numpy` / Autograd workflow.
 
+The rank-matched readout controls in version `0.5.0` are based on the score-space construction used in the companion spectral-geometry project:
+
+`AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws`.
+
 ## Install in Colab
 
 ```python
 !pip -q install "pennylane>=0.45,<0.46"
-!pip -q install --upgrade "git+https://github.com/AHDMarwan/aqng.git"
+!pip -q install --upgrade "git+https://github.com/AHDMarwan/Accessible-Quantum-Natural-Gradient.git"
 ```
 
-Then import either implementation:
+Then import the optimizer implementations and, when needed, the readout-control utilities:
 
 ```python
 from aqng_pennylane import AQNGOptimizer
 from aqng_efficient import AQNGEfficientOptimizer
+from aqng_readouts import fit_rank_matched_readouts, solve_controlled_direction
 ```
 
-Package version `0.4.0` installs both modules.
+Package version `0.5.0` installs all three modules.
 
 ## Standard corrected AQNG
 
@@ -84,8 +89,8 @@ aqng = AQNGEfficientOptimizer(
 Use a normal loss batch and a smaller metric batch:
 
 ```python
-loss_ids = batch_ids[t]      # e.g. 10 examples
-metric_ids = loss_ids[:2]    # stochastic accessible geometry
+loss_ids = batch_ids[t]
+metric_ids = loss_ids[:2]
 
 cost = make_cost(X_train[loss_ids], y_train[loss_ids])
 features, covariance = make_metric_fns(X_train[metric_ids])
@@ -138,6 +143,107 @@ Set either value to `None` to disable that bound.
 - metric rank/trace/condition;
 - gradient, metric, solve and total-step timings.
 
+## AQNG v2: rank-matched orientation controls
+
+`aqng_readouts.py` ports the relevant score-space machinery from the spectral-geometry reproducibility code. For one calibration reference distribution it constructs three readouts with exactly the same covariance rank:
+
+- `physical`: the low-weight diagonal Walsh/Pauli-Z span;
+- `random_rank`: a Haar-random centered score subspace of the same rank;
+- `aligned_crossfit`: a leading score subspace fitted on independent calibration tangent directions.
+
+The basis vectors are converted to fixed classical outcome functions. Physical, random and aligned metrics can therefore be formed from the same computational-basis probability/Jacobian record; only the retained orientation changes.
+
+The helper
+
+```python
+solve_controlled_direction(...)
+```
+
+adds controls needed for fair optimizer comparisons:
+
+- `metric_normalization="trace"` or `"maxeig"` to remove a pure metric-scale confound;
+- `damping_mode="absolute"`, `"mean_eig"`, or `"maxeig"`;
+- Euclidean direction clipping;
+- an accessible-metric trust radius.
+
+## AQNG v2 benchmark suite
+
+The published v1 experiment remains unchanged in `experiments/paper_classification.py`. The follow-up controls live in:
+
+`experiments/aqng_v2_benchmark.py`
+
+Install experiment extras:
+
+```bash
+pip install -e ".[experiments,test]"
+```
+
+### 1. Same-rank physical / random / aligned AQNG
+
+```bash
+python experiments/aqng_v2_benchmark.py \
+  --dataset iris01 \
+  --seed 0 \
+  --suite orientation \
+  --metric-normalization trace \
+  --max-metric-step 0.25 \
+  --output-dir results/aqng_v2/iris_seed0
+```
+
+The script fits the aligned readout from label-free calibration inputs and one tangent set, freezes it, and evaluates held-out tangent retention with a separate tangent set. `orientation_diags_*.csv` also computes the three AQNG metrics from one shared initial probability/Jacobian record.
+
+### 2. Metric scale, damping, learning-rate, and trust-radius controls
+
+Per-method tuning can be specified without changing the global protocol:
+
+```bash
+python experiments/aqng_v2_benchmark.py \
+  --dataset wine01 --seed 0 --suite full \
+  --metric-normalization trace \
+  --damping-mode absolute \
+  --lr-override AQNG-aligned=0.02 \
+  --lam-override Full-QNG=0.003 \
+  --max-direction-norm 8 \
+  --max-metric-step 0.25 \
+  --output-dir results/aqng_v2/wine_seed0
+```
+
+For a strict ablation, repeat with `--metric-normalization none` and/or a disabled trust radius using a sufficiently large bound.
+
+### 3. Optimizer baselines
+
+`--suite full` runs:
+
+- `AQNG-physical`;
+- `AQNG-random`;
+- `AQNG-aligned`;
+- `AQNG-Z0` (only the actual scalar task head as accessible geometry);
+- `Full-QNG`;
+- `Block-QNG`;
+- `SGD`;
+- `Adam`.
+
+All metric methods share the same metric minibatch and refresh schedule. Full QNG and block QNG use the same QFIM convention (`4 *` the Fubini-Study metric).
+
+### 4. End-to-end finite-shot AQNG
+
+```bash
+python experiments/aqng_v2_benchmark.py \
+  --dataset digits01 \
+  --seed 0 \
+  --suite full \
+  --shots 10000 \
+  --cov-lam 1e-3 \
+  --finite-shot-calibration \
+  --metric-normalization trace \
+  --max-metric-step 0.25 \
+  --output-dir results/aqng_v2/digits_shots10k_seed0
+```
+
+With `--shots`, AQNG uses finite-shot computational-basis probabilities and a PennyLane parameter-shift probability Jacobian; the supervised Z0 loss gradient is also finite-shot and parameter-shift differentiated. Terminal train/test metrics are evaluated analytically. `loss_shots_total`, `metric_shots_total`, and execution counters are recorded through PennyLane trackers when exposed by the device.
+
+In finite-shot mode `Full-QNG` and `Block-QNG` are deliberately labeled analytic oracle metric baselines; they are not presented as shot-matched hardware costs. Use SGD/Adam as genuinely finite-shot non-metric baselines.
+
 ## Simulator differentiation
 
 For analytic simulator benchmarks on compatible devices such as `default.qubit`, expectation-value QNodes can use:
@@ -173,6 +279,23 @@ qng = qml.QNGOptimizer(stepsize=0.03, approx="block-diag", lam=1e-3)
 ```
 
 For a fair comparison keep the circuit, initialization, loss batches, loss function, tuning protocol and evaluation budget fixed. Report both AQNG's loss batch and metric batch. Compare convergence versus optimization step, wall-clock time, circuit executions and total shots.
+
+## Tests
+
+The new pure-NumPy readout/control tests check:
+
+- identical rank for physical/random/aligned readouts;
+- recovery of a held-out target score subspace by cross-fitted alignment;
+- centered/whitened reference features;
+- invariance of `J^T Sigma^+ J` under invertible coordinates inside one feature span;
+- trace normalization and trust-radius enforcement;
+- computational-basis sample indexing.
+
+Run:
+
+```bash
+pytest -q
+```
 
 ## Colab example
 

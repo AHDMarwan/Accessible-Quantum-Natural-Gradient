@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "aqng-pennylane"
-version = "0.4.0"
-description = "Accessible Quantum Natural Gradient optimizers for PennyLane"
+version = "0.5.0"
+description = "Accessible Quantum Natural Gradient optimizers and readout-geometry controls for PennyLane"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -13,5 +13,18 @@ dependencies = [
   "pennylane>=0.45,<0.46",
 ]
 
+[project.optional-dependencies]
+experiments = [
+  "pandas>=2.0",
+  "scikit-learn>=1.3",
+  "tqdm>=4.66",
+  "pennylane-lightning>=0.45,<0.46",
+]
+test = ["pytest>=8"]
+
+[project.urls]
+Repository = "https://github.com/AHDMarwan/Accessible-Quantum-Natural-Gradient"
+SpectralGeometrySource = "https://github.com/AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws"
+
 [tool.setuptools]
-py-modules = ["aqng_pennylane", "aqng_efficient"]
+py-modules = ["aqng_pennylane", "aqng_efficient", "aqng_readouts"]
