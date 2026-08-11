@@ -9,11 +9,11 @@ and the probability-weighted score matrix
 \begin{equation}
  S_{ai}=\sqrt{p_a}\,s_{ai}.
 \end{equation}
-The classical Fisher information matrix (CFIM) of the full measurement record is then
+By the definition of classical Fisher information,
 \begin{equation}
- G_{\rm C}=S^{\mathsf T}S.
+ G_{\rm C}=\sum_a p_a s_a s_a^{\mathsf T}=S^{\mathsf T}S.
 \end{equation}
-Because $\sum_a p_a s_{ai}=0$, the score lives in the centered outcome subspace. For any fixed quantum measurement, $G_{\rm C}\preceq G_{\rm Q}$, where $G_{\rm Q}$ denotes the QFIM in the same convention.
+Moreover, differentiating $\sum_a p_a=1$ gives $\sum_a p_a s_{ai}=\sum_a\partial_i p_a=0$, so every score vector lies in the centered outcome subspace. For any fixed quantum measurement, the associated CFIM is bounded by the QFIM in the same convention, $G_{\rm C}\preceq G_{\rm Q}$ \cite{Braunstein1994}.
 
 Now retain $r$ commuting readout functions $f_1,\ldots,f_r$ of the same outcomes. Let $F\in\mathbb R^{|\Omega|\times r}$ contain these functions and let
 \begin{equation}
@@ -25,10 +25,16 @@ be their centered version. Introduce
  \qquad
  \Sigma=B^{\mathsf T}B,
 \end{equation}
-where $D_p=\operatorname{diag}(p)$. The readout expectation Jacobian is
+where $D_p=\operatorname{diag}(p)$. Direct differentiation of the readout expectations gives
+\begin{align}
+J_{\alpha i}
+&=\partial_i\sum_a p_a F_{a\alpha}
+ =\sum_a p_a s_{ai}F_{a\alpha}\\
+&=\sum_a p_a s_{ai}\widetilde F_{a\alpha},
+\end{align}
+where the last equality uses the centered-score identity above. Hence
 \begin{equation}
- J=\partial_{\bm\theta}\langle F\rangle
-   =B^{\mathsf T}S.
+ J=\partial_{\bm\theta}\langle F\rangle=B^{\mathsf T}S.
 \end{equation}
 AQNG uses the covariance-normalized pullback
 \begin{equation}
@@ -44,11 +50,11 @@ Equation~\eqref{eq:gacc} has a direct geometric interpretation. Substituting $J=
  &=S^{\mathsf T}P_BS,
  \label{eq:projection_identity}
 \end{align}
-where $P_B$ is the orthogonal projector onto the probability-weighted centered readout span $\operatorname{col}(B)$. Thus, for commuting retained features, the accessible metric is exactly the Gram matrix of the projected measurement score. In particular,
+where $P_B=B(B^{\mathsf T}B)^+B^{\mathsf T}$ is the orthogonal projector onto the probability-weighted centered readout span $\operatorname{col}(B)$. Since $0\preceq P_B\preceq I$,
 \begin{equation}
- 0\preceq \Gacc\preceq G_{\rm C}\preceq G_{\rm Q}.
+ 0\preceq \Gacc\preceq G_{\rm C}\preceq G_{\rm Q},
 \end{equation}
-The construction is therefore not a generic low-rank approximation to $G_{\rm Q}$. It is the metric induced by a specified measurement interface. Figure~\ref{fig:accessible_geometry} summarizes the construction.
+with the last inequality supplied by the quantum Fisher bound above \cite{Braunstein1994}. Thus, for commuting retained features, the accessible metric is exactly the Gram matrix of the projected measurement score. It is not defined as a generic low-rank approximation to $G_{\rm Q}$; it is the metric induced by a specified measurement interface. Figure~\ref{fig:accessible_geometry} summarizes the construction.
 
 \begin{figure}[t]
 \centering
@@ -71,19 +77,17 @@ The construction is therefore not a generic low-rank approximation to $G_{\rm Q}
 \label{fig:accessible_geometry}
 \end{figure}
 
-The covariance normalization is essential. A change of coordinates $F\mapsto FM$ with nonsingular $M$ leaves $P_B$, and hence $\Gacc$, unchanged. The metric depends on the retained subspace rather than on arbitrary rescalings of the readout basis.
+The covariance normalization removes arbitrary basis scaling inside a fixed retained span. Indeed, replacing $B$ by $BM$ for any nonsingular $M$ leaves $\operatorname{col}(B)$ unchanged, hence leaves the orthogonal projector $P_B$ and therefore $\Gacc$ unchanged by Eq.~\eqref{eq:projection_identity}.
 
 \subsection{Retention and orientation}
-To diagnose which score directions a rank-$r$ readout captures, we use a normalized tangent-score covariance $C\succeq0$ with $\Tr C=1$. If $P$ projects onto the retained score subspace, the retained mass is
+To diagnose which score directions a rank-$r$ readout captures, we use the normalized tangent-score covariance introduced in Refs.~\cite{AitHaddou2026ReadoutRank,AitHaddou2026SpectralGeometry}, $C\succeq0$ with $\Tr C=1$. If $P$ projects onto the retained score subspace, the retained mass and rank-normalized retention are
 \begin{equation}
  R=\Tr(PC),
-\end{equation}
-and the rank-normalized retention is
-\begin{equation}
+ \qquad
  \rho=\frac{R}{r/N},
  \label{eq:rho}
 \end{equation}
-where $N$ is the centered score-space dimension. Under a uniformly random rank-$r$ subspace, $\mathbb E\rho=1$ \cite{AitHaddou2026ReadoutRank,AitHaddou2026SpectralGeometry}. Values $\rho\gg1$ therefore diagnose orientation beyond the rank baseline. The spectral theory further shows that random-subspace fluctuations are controlled by the spectrum of $C$, so rank, anisotropy, and orientation must be separated rather than collapsed into a single notion of ``information retained'' \cite{AitHaddou2026SpectralGeometry}.
+where $N$ is the centered score-space dimension. Under a uniformly random rank-$r$ subspace, $\mathbb E\rho=1$ \cite{AitHaddou2026ReadoutRank,AitHaddou2026SpectralGeometry}. Values $\rho\gg1$ therefore diagnose orientation beyond the rank baseline. The corresponding random-subspace variance is controlled by the spectrum of $C$, which separates readout rank, tangent anisotropy, and relative orientation \cite{AitHaddou2026SpectralGeometry}.
 
 \subsection{Scope}
-The exact projector identity above assumes retained functions that are jointly estimable from one commuting measurement record. Noncommuting observables require an explicit grouping or measurement model; a covariance matrix written for incompatible observables does not by itself define one operational interface. All primary AQNG experiments in this paper use diagonal functions of computational-basis outcomes, so the commuting construction applies directly.
+Equation~\eqref{eq:projection_identity} is an operational statement only when the retained functions are jointly estimable from the same measurement outcome record. In this work that condition is enforced by using diagonal functions of computational-basis outcomes. If one instead wishes to combine incompatible observables, the measurement protocol and its joint classical record must first be specified; only then can an analogous score-space construction be defined.
