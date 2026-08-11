@@ -8,6 +8,12 @@ on:
       - 'experiments/aqng_hparam_tune.py'
       - 'experiments/aqng_validation_gate.py'
       - '.github/workflows/aqng-validation-tune.yml'
+  pull_request:
+    paths:
+      - 'aqng_validation.py'
+      - 'experiments/aqng_hparam_tune.py'
+      - 'experiments/aqng_validation_gate.py'
+      - '.github/workflows/aqng-validation-tune.yml'
   workflow_dispatch:
 
 permissions:
