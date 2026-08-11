@@ -18,9 +18,11 @@ jobs:
         with:
           python-version: '3.11'
           cache: pip
-      - name: Install package and tests
+      - name: Install package, tests, and experiment extras
         run: |
           python -m pip install --upgrade pip
-          pip install -e ".[test]"
-      - name: Run tests
+          pip install -e ".[test,experiments]"
+      - name: Run unit tests
         run: pytest -q
+      - name: Run AQNG v2 smoke gate
+        run: python experiments/smoke_aqng_v2.py
