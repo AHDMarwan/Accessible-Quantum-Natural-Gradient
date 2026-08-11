@@ -48,7 +48,28 @@ where $P_B$ is the orthogonal projector onto the probability-weighted centered r
 \begin{equation}
  0\preceq \Gacc\preceq G_{\rm C}\preceq G_{\rm Q}.
 \end{equation}
-The construction is therefore not a generic low-rank approximation to $G_{\rm Q}$. It is the metric induced by a specified measurement interface.
+The construction is therefore not a generic low-rank approximation to $G_{\rm Q}$. It is the metric induced by a specified measurement interface. Figure~\ref{fig:accessible_geometry} summarizes the construction.
+
+\begin{figure}[t]
+\centering
+\begin{tikzpicture}[
+  node distance=5mm,
+  box/.style={draw, rounded corners, align=center, inner sep=4pt, font=\scriptsize},
+  >=Latex
+]
+\node[box] (score) {measurement score\\$S$};
+\node[box, right=of score] (proj) {retained span\\$P_B$};
+\node[box, right=of proj] (metric) {accessible metric\\$\Gacc=S^{\mathsf T}P_BS$};
+\node[box, below=of metric] (step) {preconditioned step\\$(\Gacc+\lambda I)d=g$};
+\draw[->] (score) -- (proj);
+\draw[->] (proj) -- (metric);
+\draw[->] (metric) -- (step);
+\node[font=\scriptsize, below=6mm of score] (full) {$G_{\rm C}=S^{\mathsf T}S$};
+\draw[->] (full) -- (score);
+\end{tikzpicture}
+\caption{Accessible natural-gradient construction. The retained readout span projects the measurement score before the pullback metric is formed; the resulting metric preconditions the task gradient.}
+\label{fig:accessible_geometry}
+\end{figure}
 
 The covariance normalization is essential. A change of coordinates $F\mapsto FM$ with nonsingular $M$ leaves $P_B$, and hence $\Gacc$, unchanged. The metric depends on the retained subspace rather than on arbitrary rescalings of the readout basis.
 
