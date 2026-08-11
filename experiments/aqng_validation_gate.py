@@ -90,32 +90,59 @@ def stable_builder(bundle, theta0, X_train, cfg):
 
 
 def _first_step_task_diag(method, cfg, data, batches, designs, family):
+    """Compute the first-step task diagnostic for both metric and Euclidean baselines."""
     # Separate bundle: diagnostics do not consume the training RNG stream.
     b = _ORIGINAL_BUNDLE(family, cfg, stream_tag=f"diag-{method}")
     theta = v2.v1.init_theta(b.p, cfg.seed)
     ids = batches[0]
     mids = ids[: min(cfg.metric_batch, len(ids))]
-    z0 = v2._z0_features(cfg.n_qubits)
-    G, _, _ = v2._metric_for_method(b, method, theta, data["X_train"][mids], designs, z0, cfg)
     cost_train = v2._make_cost(b.train_pred, data["X_train"][ids], data["y_train_pm"][ids])
     grad = v2.v1.tonp(qml.grad(cost_train)(theta)).reshape(-1)
-    direction, controls = v2.solve_controlled_direction(
-        G, grad,
-        lam=float(cfg.method_lam(method)),
-        stepsize=float(cfg.method_lr(method)),
-        rcond=cfg.rcond,
-        metric_normalization=cfg.metric_normalization,
-        damping_mode=cfg.damping_mode,
-        max_direction_norm=cfg.max_direction_norm,
-        max_metric_step=cfg.max_metric_step,
-    )
     lr = float(cfg.method_lr(method))
+
+    if method in v2.METRIC_METHODS:
+        z0 = v2._z0_features(cfg.n_qubits)
+        G, _, _ = v2._metric_for_method(
+            b, method, theta, data["X_train"][mids], designs, z0, cfg
+        )
+        direction, controls = v2.solve_controlled_direction(
+            G, grad,
+            lam=float(cfg.method_lam(method)),
+            stepsize=lr,
+            rcond=cfg.rcond,
+            metric_normalization=cfg.metric_normalization,
+            damping_mode=cfg.damping_mode,
+            max_direction_norm=cfg.max_direction_norm,
+            max_metric_step=cfg.max_metric_step,
+        )
+        spec = v2._spectral_summary(G, cfg.rcond)
+    elif method == "SGD":
+        direction = onp.array(grad, copy=True)
+        controls = {"trust_region_clipped": False}
+        spec = {"metric_rank": 0, "metric_condition": onp.nan}
+    elif method == "Adam":
+        state = {
+            "m": onp.zeros(b.p, dtype=float),
+            "v": onp.zeros(b.p, dtype=float),
+            "t": 0,
+        }
+        direction = v2._adam_direction(
+            grad,
+            state,
+            beta1=cfg.adam_beta1,
+            beta2=cfg.adam_beta2,
+            eps=cfg.adam_eps,
+        )
+        controls = {"trust_region_clipped": False}
+        spec = {"metric_rank": 0, "metric_condition": onp.nan}
+    else:  # pragma: no cover
+        raise ValueError(f"unknown method {method!r}")
+
     theta1 = np.array(v2.v1.tonp(theta) - lr * direction, requires_grad=True)
     # Evaluate actual same-minibatch loss analytically to avoid evaluation-shot noise.
     c0 = v2._make_cost(b.pred, data["X_train"][ids], data["y_train_pm"][ids])
     loss0 = float(c0(theta))
     loss1 = float(c0(theta1))
-    spec = v2._spectral_summary(G, cfg.rcond)
     return {
         "first_g_dot_d": float(onp.dot(grad, direction)),
         "first_predicted_decrease": float(lr * onp.dot(grad, direction)),
@@ -171,6 +198,7 @@ def main():
     p.add_argument("--dataset", default="iris01", choices=v2.v1.DATASETS)
     p.add_argument("--seed", required=True, type=int)
     p.add_argument("--output-dir", required=True, type=Path)
+    p.add_argument("--suite", choices=("orientation", "full"), default="orientation")
     p.add_argument("--shots", type=int, default=None)
     p.add_argument("--finite-shot-calibration", action="store_true")
     p.add_argument("--paired-shot-streams", action="store_true")
@@ -203,7 +231,7 @@ def main():
         dataset=a.dataset, seed=a.seed, n_qubits=a.n_qubits, n_layers=a.n_layers,
         n_samples=a.n_samples, steps=a.steps, lr=a.lr, lam=a.lam,
         loss_batch=a.loss_batch, metric_batch=a.metric_batch, metric_every=a.metric_every,
-        cov_lam=cov_lam, suite="orientation", readout_order=a.readout_order,
+        cov_lam=cov_lam, suite=a.suite, readout_order=a.readout_order,
         alignment_batch=a.alignment_batch, alignment_tangents=a.alignment_tangents,
         alignment_eval_tangents=a.alignment_eval_tangents,
         metric_normalization=a.metric_normalization, damping_mode=a.damping_mode,
@@ -215,7 +243,7 @@ def main():
     # frozen dataclass: validation-only attributes are attached through class defaults
     type(cfg).support_pseudocount = a.support_pseudocount
     install_validation_hooks(paired_shot_streams=bool(a.paired_shot_streams))
-    df = v2.run_job(cfg, a.output_dir)
+    v2.run_job(cfg, a.output_dir)
     df = postprocess_resources(a.output_dir, a.dataset, a.seed)
     cols = ["family","method","seed","test_loss","test_acc","first_g_dot_d","first_actual_same_batch_decrease","training_shots_total","end_to_end_shots_including_calibration"]
     print(df[cols].to_string(index=False))
