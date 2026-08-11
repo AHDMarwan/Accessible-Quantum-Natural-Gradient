@@ -1,25 +1,93 @@
-# AQNG for PennyLane
+# Accessible Quantum Natural Gradient (AQNG)
 
-Accessible Quantum Natural Gradient (AQNG) uses the Fisher geometry visible through a selected measurement/readout space,
+Accessible Quantum Natural Gradient (AQNG) is a measurement-aware natural-gradient method for variational quantum models. Instead of preconditioning with the full quantum Fisher information matrix, AQNG uses the Fisher geometry that is actually visible through a chosen commuting measurement/readout interface.
+
+For retained readout features with expectation Jacobian `J` and covariance `Sigma`, the accessible metric is
 
 \[
-G_{\rm acc}=\frac1B\sum_{b=1}^B J_b^T\Sigma_b^{+}J_b.
+G_{\mathrm{acc}} = J^\mathsf{T}\Sigma^{+}J.
 \]
 
-Target API: PennyLane `0.45.x`, using the `pennylane.numpy` / Autograd workflow.
+For jointly measurable retained features this admits the exact score-space identity
 
-The rank-matched readout controls in version `0.5.0` are based on the score-space construction used in the companion spectral-geometry project:
+\[
+G_{\mathrm{acc}} = S^\mathsf{T} P S,
+\]
 
-`AHDMarwan/Spectral-Geometry-of-Accessible-Quantum-Tangents-Beyond-Isotropic-Readout-Rank-Laws`.
+where `S` is the probability-weighted measurement-score matrix and `P` is the orthogonal projector onto the retained centered readout span. AQNG is therefore a metric induced by a specified measurement interface, not merely a numerical low-rank approximation to the QFIM.
 
-## Install in Colab
+## Current status
 
-```python
-!pip -q install "pennylane>=0.45,<0.46"
-!pip -q install --upgrade "git+https://github.com/AHDMarwan/Accessible-Quantum-Natural-Gradient.git"
+This repository contains the current AQNG implementation, the complete frozen paper-scale result package, and the new manuscript source.
+
+- **Current manuscript:** `paper/manuscript/`
+- **Complete paper-scale results:** `results/paper/paper_scale_v2/`
+- **Primary benchmark runner:** `experiments/aqng_v2_benchmark.py`
+- **Validation / support model:** `aqng_validation.py`
+- **PennyLane implementation:** `aqng_pennylane.py`, `aqng_efficient.py`, `aqng_readouts.py`
+
+The previous AQNG manuscript and the earlier `paper_main_v1` result package are intentionally not part of the canonical `main` tree.
+
+## Main experimental results
+
+The frozen campaign contains **470 experiment cells and 3160 terminal optimizer rows**, followed by a separately identified **15-cell / 30-row SGD–Adam large/deep follow-up**.
+
+The primary matrix combines four binary datasets, four circuit families, 20 paired seeds, and eight optimizers. Auxiliary blocks study qubit scaling, depth scaling, readout order, and finite-shot behavior.
+
+Across the 240 generic primary dataset–architecture cases (excluding the structured `U(1)` negative control), pooled descriptive means are:
+
+| Method | Mean test loss | Mean test accuracy |
+|---|---:|---:|
+| AQNG-aligned | **0.594494** | **0.7947** |
+| AQNG-random | 0.595566 | 0.7914 |
+| SGD | 0.608363 | 0.7858 |
+| Adam | 0.620272 | 0.7731 |
+| AQNG-physical | 0.622907 | 0.7878 |
+| AQNG-Z0 | 0.635241 | 0.7828 |
+| Full-QNG | 0.656169 | 0.7689 |
+| Block-QNG | 0.678055 | 0.7606 |
+
+These pooled values are descriptive rather than a claim that one optimizer is universally superior. Architecture dependence remains substantial.
+
+In the matched large/deep SU(2)-Haar follow-up, aligned AQNG beats SGD in all 15 paired cases and remains competitive with Adam. The Adam difference is not statistically resolved with five seeds per setting. The follow-up is reported explicitly as post-hoc because it was specified after inspection of the main campaign.
+
+The geometry diagnostics are equally important:
+
+- SU(2)-Haar scaling shows strong orientation above the random-rank baseline, while optimization gains remain nonmonotonic.
+- In the number-conserving `U(1)` control, measurement accessibility stays near complete while the supervised gradient collapses by orders of magnitude. Accessibility is therefore not equivalent to trainability.
+- Increasing the diagonal readout from weight one to weight two can increase retained tangent mass while worsening optimization because the accessible metric becomes severely ill-conditioned.
+- Finite-shot experiments support the measurement-accessible construction, but Full-QNG uses an analytic metric oracle in those runs and is not a shot-matched hardware-cost baseline.
+
+The central empirical message is:
+
+> Accessible geometry is a controllable and diagnostically interpretable optimization resource, but task utility depends jointly on readout orientation, metric conditioning, and surviving task-gradient signal—not retained information alone.
+
+## Result package
+
+`results/paper/paper_scale_v2/` is the durable paper-facing package. It contains:
+
+- `raw/results_all.csv` — all 3160 terminal rows;
+- `raw/calibration_all.csv` — all 470 calibration rows;
+- `raw/orientation_all.csv` — orientation diagnostics;
+- `raw/curves_all.csv.gz` — complete training curves;
+- `raw/metric_diags_all.csv.gz` — complete metric diagnostics;
+- `summaries/` — corrected primary, scaling, depth, readout-order, finite-shot, geometry, resource and paired-test summaries;
+- `followup/` — the complete SGD/Adam large/deep follow-up and merged matched comparisons;
+- `report.json` — provenance and completeness metadata;
+- `SHA256SUMS` — checksums for the committed result package.
+
+The source paper-scale workflow completed successfully. A reporting-tag mismatch in the original aggregation step produced empty block-summary outputs, so the committed `summaries/` files were regenerated from the unchanged complete raw tables. The raw experiment outputs themselves were not rerun or altered for that reporting fix.
+
+## Installation
+
+Target environment: Python 3.10+ and PennyLane 0.45.x.
+
+```bash
+pip install "pennylane>=0.45,<0.46"
+pip install -e ".[experiments,test]"
 ```
 
-Then import the optimizer implementations and, when needed, the readout-control utilities:
+Core imports:
 
 ```python
 from aqng_pennylane import AQNGOptimizer
@@ -27,280 +95,86 @@ from aqng_efficient import AQNGEfficientOptimizer
 from aqng_readouts import fit_rank_matched_readouts, solve_controlled_direction
 ```
 
-Package version `0.5.0` installs all three modules.
+## AQNG readout controls
 
-## Standard corrected AQNG
+`aqng_readouts.py` constructs equal-rank measurement controls:
 
-`AQNGOptimizer` factors
+- `physical` — low-weight diagonal Walsh / Pauli-Z readout span;
+- `random_rank` — Haar-random centered score subspace of the same rank;
+- `aligned_crossfit` — leading score subspace fitted from independent calibration tangents and evaluated on held-out tangents.
 
-\[
-G_{\rm acc}=A^T A
-\]
+The physical, random and aligned readouts have the same retained rank. This isolates orientation from the trivial dimension advantage.
 
-and solves
+AQNG also supports metric trace or max-eigenvalue normalization, several damping conventions, Euclidean direction clipping, an accessible-metric trust radius, primal/dual/SVD solves, and metric caching.
 
-\[
-(G_{\rm acc}+\lambda I)d=\nabla L.
-\]
+## Running the benchmark
 
-With `solver="auto"` and `lam > 0`, it chooses the smaller exact system:
-
-- primal: size `p` when `p <= B*r`;
-- dual (Woodbury): size `B*r` when `B*r < p`.
-
-The mini-batch dual dimension is `B*r`, not generally `r`.
-
-## Efficient AQNG
-
-`AQNGEfficientOptimizer` targets the dominant practical cost: rebuilding the accessible Jacobian/metric.
-
-It supports:
-
-1. a smaller metric mini-batch than the objective/gradient batch;
-2. scheduled metric caching via `metric_every`;
-3. adaptive early refresh when stale geometry proposes an anomalously large direction;
-4. Euclidean direction clipping through `max_direction_norm`;
-5. an accessible-metric trust radius
-   \[
-   \|\Delta\theta\|_{G_{\rm acc}}=\eta\|A d\|\le \Delta_G;
-   \]
-6. automatic primal/dual solving;
-7. timing and safety diagnostics.
-
-Recommended benchmark configuration after the Iris efficiency tests:
-
-```python
-from aqng_efficient import AQNGEfficientOptimizer
-
-aqng = AQNGEfficientOptimizer(
-    stepsize=0.03,
-    lam=1e-3,
-    cov_lam=1e-3,
-    metric_every=2,
-    adaptive_refresh=True,
-    refresh_direction_growth=2.0,
-    max_direction_norm=8.0,
-    max_metric_step=0.25,
-    solver="auto",
-    rcond=1e-8,
-)
-```
-
-Use a normal loss batch and a smaller metric batch:
-
-```python
-loss_ids = batch_ids[t]
-metric_ids = loss_ids[:2]
-
-cost = make_cost(X_train[loss_ids], y_train[loss_ids])
-features, covariance = make_metric_fns(X_train[metric_ids])
-
-theta, old_loss = aqng.step_and_cost(
-    cost,
-    theta,
-    feature_fn=features,
-    covariance_fn=covariance,
-)
-```
-
-### Adaptive refresh
-
-The metric is refreshed on the normal `metric_every` schedule. On a stale step, AQNG first solves with the cached factor. Before accepting the direction it can force an immediate refresh when:
-
-- the direction becomes non-finite;
-- `||d|| > max_direction_norm`;
-- the raw direction norm grows by more than `refresh_direction_growth` relative to the previous step.
-
-After an adaptive refresh the direction is solved again using the current metric.
-
-### Trust region
-
-After the final solve, the direction can be clipped by two independent safeguards:
-
-```python
-max_direction_norm=...
-max_metric_step=...
-```
-
-`max_metric_step` bounds the actual parameter displacement in accessible Fisher length,
-
-\[
-\eta\|A d\|\le {\tt max\_metric\_step}.
-\]
-
-Set either value to `None` to disable that bound.
-
-### Diagnostics
-
-`aqng.diagnostics` includes:
-
-- `metric_recomputed`, `adaptive_refresh_triggered`, `refresh_reason`, `metric_age`;
-- `raw_direction_norm`, `natural_gradient_norm`;
-- `raw_metric_step_norm`, `metric_step_norm`;
-- `trust_region_clipped`, `clip_scale`;
-- `batch_size`, `feature_dim`, `parameter_dim`;
-- `solver`, `solve_dimension`;
-- metric rank/trace/condition;
-- gradient, metric, solve and total-step timings.
-
-## AQNG v2: rank-matched orientation controls
-
-`aqng_readouts.py` ports the relevant score-space machinery from the spectral-geometry reproducibility code. For one calibration reference distribution it constructs three readouts with exactly the same covariance rank:
-
-- `physical`: the low-weight diagonal Walsh/Pauli-Z span;
-- `random_rank`: a Haar-random centered score subspace of the same rank;
-- `aligned_crossfit`: a leading score subspace fitted on independent calibration tangent directions.
-
-The basis vectors are converted to fixed classical outcome functions. Physical, random and aligned metrics can therefore be formed from the same computational-basis probability/Jacobian record; only the retained orientation changes.
-
-The helper
-
-```python
-solve_controlled_direction(...)
-```
-
-adds controls needed for fair optimizer comparisons:
-
-- `metric_normalization="trace"` or `"maxeig"` to remove a pure metric-scale confound;
-- `damping_mode="absolute"`, `"mean_eig"`, or `"maxeig"`;
-- Euclidean direction clipping;
-- an accessible-metric trust radius.
-
-## AQNG v2 benchmark suite
-
-The published v1 experiment remains unchanged in `experiments/paper_classification.py`. The follow-up controls live in:
-
-`experiments/aqng_v2_benchmark.py`
-
-Install experiment extras:
-
-```bash
-pip install -e ".[experiments,test]"
-```
-
-### 1. Same-rank physical / random / aligned AQNG
+A compact analytic run:
 
 ```bash
 python experiments/aqng_v2_benchmark.py \
   --dataset iris01 \
   --seed 0 \
-  --suite orientation \
+  --suite full \
   --metric-normalization trace \
-  --max-metric-step 0.25 \
-  --output-dir results/aqng_v2/iris_seed0
-```
-
-The script fits the aligned readout from label-free calibration inputs and one tangent set, freezes it, and evaluates held-out tangent retention with a separate tangent set. `orientation_diags_*.csv` also computes the three AQNG metrics from one shared initial probability/Jacobian record.
-
-### 2. Metric scale, damping, learning-rate, and trust-radius controls
-
-Per-method tuning can be specified without changing the global protocol:
-
-```bash
-python experiments/aqng_v2_benchmark.py \
-  --dataset wine01 --seed 0 --suite full \
-  --metric-normalization trace \
-  --damping-mode absolute \
-  --lr-override AQNG-aligned=0.02 \
-  --lam-override Full-QNG=0.003 \
   --max-direction-norm 8 \
   --max-metric-step 0.25 \
-  --output-dir results/aqng_v2/wine_seed0
+  --output-dir results/local/iris_seed0
 ```
 
-For a strict ablation, repeat with `--metric-normalization none` and/or a disabled trust radius using a sufficiently large bound.
+The full suite contains:
 
-### 3. Optimizer baselines
+`AQNG-physical`, `AQNG-random`, `AQNG-aligned`, `AQNG-Z0`, `Full-QNG`, `Block-QNG`, `SGD`, and `Adam`.
 
-`--suite full` runs:
+For finite-shot runs, AQNG uses finite-shot computational-basis probabilities and parameter-shift probability Jacobians. The known support is fixed from circuit structure; the number-conserving family uses its fixed-Hamming-weight sector rather than inferring support from observed counts.
 
-- `AQNG-physical`;
-- `AQNG-random`;
-- `AQNG-aligned`;
-- `AQNG-Z0` (only the actual scalar task head as accessible geometry);
-- `Full-QNG`;
-- `Block-QNG`;
-- `SGD`;
-- `Adam`.
+## Reproducing the paper-scale analysis
 
-All metric methods share the same metric minibatch and refresh schedule. Full QNG and block QNG use the same QFIM convention (`4 *` the Fubini-Study metric).
+The experiment and analysis scripts used for the final campaign are retained under `experiments/`, and the corresponding GitHub Actions workflows are retained under `.github/workflows/`.
 
-### 4. End-to-end finite-shot AQNG
-
-```bash
-python experiments/aqng_v2_benchmark.py \
-  --dataset digits01 \
-  --seed 0 \
-  --suite full \
-  --shots 10000 \
-  --cov-lam 1e-3 \
-  --finite-shot-calibration \
-  --metric-normalization trace \
-  --max-metric-step 0.25 \
-  --output-dir results/aqng_v2/digits_shots10k_seed0
-```
-
-With `--shots`, AQNG uses finite-shot computational-basis probabilities and a PennyLane parameter-shift probability Jacobian; the supervised Z0 loss gradient is also finite-shot and parameter-shift differentiated. Terminal train/test metrics are evaluated analytically. `loss_shots_total`, `metric_shots_total`, and execution counters are recorded through PennyLane trackers when exposed by the device.
-
-In finite-shot mode `Full-QNG` and `Block-QNG` are deliberately labeled analytic oracle metric baselines; they are not presented as shot-matched hardware costs. Use SGD/Adam as genuinely finite-shot non-metric baselines.
-
-## Simulator differentiation
-
-For analytic simulator benchmarks on compatible devices such as `default.qubit`, expectation-value QNodes can use:
-
-```python
-@qml.qnode(dev, interface="autograd", diff_method="adjoint")
-def feature_qnode(theta, x):
-    ...
-```
-
-For finite-shot hardware use `diff_method="parameter-shift"`.
-
-## Finite-shot Z readouts
-
-For diagonal Z strings, all feature covariances can be estimated from the same computational-basis bitstrings:
-
-```python
-from aqng_pennylane import z_covariance_from_bitstrings
-
-Sigma = z_covariance_from_bitstrings(
-    samples,
-    z_terms=[(0,), (1,), (0,1), (0,2)],
-)
-```
-
-`covariance_fn` itself is not differentiated.
-
-## PennyLane QNG baseline
-
-```python
-import pennylane as qml
-qng = qml.QNGOptimizer(stepsize=0.03, approx="block-diag", lam=1e-3)
-```
-
-For a fair comparison keep the circuit, initialization, loss batches, loss function, tuning protocol and evaluation budget fixed. Report both AQNG's loss batch and metric batch. Compare convergence versus optimization step, wall-clock time, circuit executions and total shots.
+The committed result package already contains the complete outputs. Re-running the 470-cell matrix is not required to inspect or regenerate the paper-facing summaries.
 
 ## Tests
-
-The new pure-NumPy readout/control tests check:
-
-- identical rank for physical/random/aligned readouts;
-- recovery of a held-out target score subspace by cross-fitted alignment;
-- centered/whitened reference features;
-- invariance of `J^T Sigma^+ J` under invertible coordinates inside one feature span;
-- trace normalization and trust-radius enforcement;
-- computational-basis sample indexing.
-
-Run:
 
 ```bash
 pytest -q
 ```
 
-## Colab example
+The tests cover solver safeguards, readout-rank matching, score-space whitening and invariance, trust-radius controls, sample indexing, and fixed-support validation behavior.
 
-Use:
+## Manuscript
 
-`examples/AQNG_Efficient_vs_PennyLane_QNG_Iris_Colab.ipynb`
+The current manuscript is written from scratch in `paper/manuscript/`. It is built with REVTeX and cites the research lineage explicitly rather than treating measurement accessibility itself as a new idea.
 
-The current notebook uses `metric_batch=2`, `metric_every=2`, adaptive refresh and trust-region safeguards, and logs all related diagnostics.
+The immediate prior works are:
+
+1. Marwan Ait Haddou and Mohamed Bennai, *Sculpting Quantum Landscapes: Fubini–Study Metric Conditioning for Geometry Aware Learning in Parameterized Quantum Circuits*, arXiv:2506.21940.
+2. Marwan Ait Haddou, *Readout-Rank Laws for Isotropic Quantum Tangents*, arXiv:2608.07628.
+3. Marwan Ait Haddou, *Measurement-Accessible Quantum Tangent Geometry: Rank Baselines and Spectral Orientation*, currently cited as an unpublished manuscript until a permanent identifier is available.
+
+The manuscript build workflow validates the LaTeX source on pull requests and builds the canonical PDF on `main`.
+
+## Scope and claims
+
+AQNG should not be read as a universal replacement for Adam or as a solution to barren plateaus. The experiments support a narrower statement: when useful task-gradient signal survives, measurement-accessible geometry can provide effective and interpretable preconditioning; when the task gradient itself collapses, the accessible metric cannot create missing signal.
+
+## Repository layout
+
+```text
+.
+├── aqng_pennylane.py          # reference AQNG optimizer
+├── aqng_efficient.py          # cached / safeguarded implementation
+├── aqng_readouts.py           # rank-matched readout geometry
+├── aqng_validation.py         # fixed-support finite-shot utilities
+├── experiments/               # frozen benchmark, validation and analysis scripts
+├── paper/manuscript/          # current paper source and built PDF
+├── results/paper/paper_scale_v2/
+│   ├── raw/
+│   ├── summaries/
+│   └── followup/
+└── tests/
+```
+
+## License / citation
+
+Please cite the manuscript and the relevant prior work when using the accessible tangent-geometry or rank-matched readout constructions. The manuscript bibliography contains the current citation metadata, including the temporary unpublished citation for the spectral-geometry paper.

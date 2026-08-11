@@ -1,0 +1,69 @@
+{
+  "generated_utc": "2026-08-11T18:59:01.595641+00:00",
+  "source_runs": {
+    "paper_scale": {
+      "run_id": 31480796466,
+      "head_sha": "1aad0e2413436084d84c9b013ef4b75a32771d06"
+    },
+    "sgd_adam_followup": {
+      "run_id": 31522334431,
+      "head_sha": "82616cabacec2f8740a8955e0c750e169112c9eb"
+    }
+  },
+  "completeness": {
+    "paper_scale_cells": 470,
+    "paper_scale_terminal_rows": 3160,
+    "paper_scale_calibration_rows": 470,
+    "primary_cells": 320,
+    "scaling_cells": 40,
+    "depth_cells": 30,
+    "order_cells": 40,
+    "finite_cells": 40,
+    "followup_cells": 15,
+    "followup_terminal_rows": 30
+  },
+  "expected": {
+    "primary_cells": 320,
+    "scaling_cells": 40,
+    "depth_cells": 30,
+    "order_cells": 40,
+    "finite_cells": 40,
+    "followup_cells": 15
+  },
+  "orientation_task_relation": {
+    "aligned_retention_vs_loss_gain": {
+      "rho": 0.056966498696276326,
+      "p": 0.3096841249631166,
+      "n": 320
+    },
+    "random_retention_vs_loss_gain": {
+      "rho": -0.016046421351771013,
+      "p": 0.7749223722214483,
+      "n": 320
+    },
+    "aligned_by_family": {
+      "ryrz_cz": {
+        "rho": -0.009985935302391,
+        "p": 0.9299455254207301,
+        "n": 80
+      },
+      "su2_cnot": {
+        "rho": -0.022175339896858885,
+        "p": 0.8452014358686961,
+        "n": 80
+      },
+      "su2_haar": {
+        "rho": -0.09873417721518989,
+        "p": 0.3835694984269856,
+        "n": 80
+      },
+      "u1_rzxy": {
+        "rho": -0.19395218002812942,
+        "p": 0.0847314845973323,
+        "n": 80
+      }
+    },
+    "n_rows": 320
+  },
+  "note": "All summaries are regenerated from raw aggregate tables. No experiment outcome is altered. The source summary artifact had empty block summaries because its parser matched 'paper-primary' rather than the actual 'paper-run-primary' tags."
+}

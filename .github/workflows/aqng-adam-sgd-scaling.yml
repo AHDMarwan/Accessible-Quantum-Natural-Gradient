@@ -1,0 +1,112 @@
+name: AQNG SGD/Adam scaling follow-up
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'experiments/aqng_remaining_baselines.py'
+      - '.github/workflows/aqng-adam-sgd-scaling.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+  OMP_NUM_THREADS: '2'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - name: Smoke frozen SGD/Adam wrapper
+        run: |
+          python experiments/aqng_remaining_baselines.py \
+            --family su2_haar --dataset iris01 --seed 0 --suite full \
+            --n-qubits 4 --n-layers 1 --n-samples 20 --steps 1 \
+            --loss-batch 2 --metric-batch 1 --metric-every 1 \
+            --readout-order 1 --alignment-batch 2 \
+            --alignment-tangents 8 --alignment-eval-tangents 8 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --lr-override 'SGD=0.10' --lr-override 'Adam=0.06' \
+            --output-dir smoke
+
+  scaling:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        n_qubits: [8, 10]
+        seed: [0, 1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - name: Run missing SGD/Adam qubit-scaling cell
+        run: |
+          python experiments/aqng_remaining_baselines.py \
+            --family su2_haar --dataset iris01 --seed '${{ matrix.seed }}' --suite full \
+            --n-qubits '${{ matrix.n_qubits }}' --n-layers 3 --n-samples 60 --steps 20 \
+            --loss-batch 4 --metric-batch 2 --metric-every 2 \
+            --readout-order 1 --alignment-batch 4 \
+            --alignment-tangents 64 --alignment-eval-tangents 64 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --lr-override 'SGD=0.10' --lr-override 'Adam=0.06' \
+            --output-dir out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-run-baselines-scaling-su2_haar-n${{ matrix.n_qubits }}-s${{ matrix.seed }}
+          path: out
+          retention-days: 90
+
+  depth:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 5
+      matrix:
+        seed: [0, 1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - name: Run missing SGD/Adam depth cell at L5
+        run: |
+          python experiments/aqng_remaining_baselines.py \
+            --family su2_haar --dataset iris01 --seed '${{ matrix.seed }}' --suite full \
+            --n-qubits 6 --n-layers 5 --n-samples 60 --steps 20 \
+            --loss-batch 4 --metric-batch 2 --metric-every 2 \
+            --readout-order 1 --alignment-batch 4 \
+            --alignment-tangents 64 --alignment-eval-tangents 64 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --lr-override 'SGD=0.10' --lr-override 'Adam=0.06' \
+            --output-dir out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-run-baselines-depth-su2_haar-L5-s${{ matrix.seed }}
+          path: out
+          retention-days: 90

@@ -1,0 +1,19 @@
+{
+  "protocol": "Nested validation on SU(2)-Haar only; seed 0; Iris01 training partition split again with random_state=271828. Neither the published test split nor U(1) control was used for selection.",
+  "grid": {
+    "lr": [0.015, 0.03, 0.06],
+    "lam": [0.0003, 0.001, 0.003],
+    "steps": 8,
+    "metric_normalization": "trace",
+    "damping_mode": "absolute",
+    "max_direction_norm": 8.0,
+    "max_metric_step": 0.25
+  },
+  "selected": {
+    "AQNG-physical": {"lr": 0.06, "lam": 0.003, "validation_loss": 0.42017196521765193, "validation_acc": 1.0},
+    "AQNG-random": {"lr": 0.06, "lam": 0.003, "validation_loss": 0.29302717901046593, "validation_acc": 1.0},
+    "AQNG-aligned": {"lr": 0.06, "lam": 0.003, "validation_loss": 0.29910383609719243, "validation_acc": 1.0},
+    "Full-QNG": {"lr": 0.06, "lam": 0.003, "validation_loss": 0.633501404597437, "validation_acc": 0.8333333333333334}
+  },
+  "freeze_rule": "These values are fixed for the medium validation pilot and must not be changed after inspecting medium-pilot outcomes."
+}

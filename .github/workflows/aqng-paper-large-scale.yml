@@ -1,0 +1,411 @@
+name: AQNG paper large-scale experiments
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+    paths:
+      - 'aqng_validation.py'
+      - 'experiments/aqng_validation_gate.py'
+      - 'experiments/tune_paper_baselines.py'
+      - 'experiments/analyze_paper_scale.py'
+      - '.github/workflows/aqng-paper-large-scale.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+  OMP_NUM_THREADS: '2'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install stack
+        run: pip install -e '.[experiments,test]'
+      - name: Unit tests
+        run: pytest -q
+      - name: Full-suite analytic smoke
+        run: |
+          python experiments/aqng_validation_gate.py \
+            --family su2_haar --dataset iris01 --seed 0 \
+            --suite full --n-qubits 4 --n-layers 1 --n-samples 20 --steps 1 \
+            --loss-batch 2 --metric-batch 1 --metric-every 1 \
+            --readout-order 1 --alignment-batch 2 \
+            --alignment-tangents 8 --alignment-eval-tangents 8 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --output-dir smoke/full
+      - name: Finite-shot U1 smoke
+        run: |
+          python experiments/aqng_validation_gate.py \
+            --family u1_rzxy --dataset iris01 --seed 0 \
+            --suite orientation --n-qubits 4 --n-layers 1 --n-samples 20 --steps 1 \
+            --loss-batch 2 --metric-batch 1 --metric-every 1 \
+            --readout-order 1 --alignment-batch 2 \
+            --alignment-tangents 8 --alignment-eval-tangents 8 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --shots 200 --finite-shot-calibration --paired-shot-streams \
+            --support-pseudocount 0.5 --cov-lam 1e-3 \
+            --output-dir smoke/shot
+
+  tune_baselines:
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    outputs:
+      z0_lr: ${{ steps.export.outputs.z0_lr }}
+      z0_lam: ${{ steps.export.outputs.z0_lam }}
+      block_lr: ${{ steps.export.outputs.block_lr }}
+      block_lam: ${{ steps.export.outputs.block_lam }}
+      sgd_lr: ${{ steps.export.outputs.sgd_lr }}
+      adam_lr: ${{ steps.export.outputs.adam_lr }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install experiment stack
+        run: pip install -e '.[experiments]'
+      - name: Nested-validation tuning
+        run: |
+          mkdir -p tuning
+          python experiments/tune_paper_baselines.py \
+            --output tuning/baseline_hparams.json \
+            --candidates-csv tuning/baseline_candidates.csv
+      - name: Export frozen baseline settings
+        id: export
+        run: |
+          python - <<'PY'
+          import json, os
+          d=json.load(open('tuning/baseline_hparams.json'))['selected']
+          vals={
+            'z0_lr': d['AQNG-Z0']['lr'],
+            'z0_lam': d['AQNG-Z0']['lam'],
+            'block_lr': d['Block-QNG']['lr'],
+            'block_lam': d['Block-QNG']['lam'],
+            'sgd_lr': d['SGD']['lr'],
+            'adam_lr': d['Adam']['lr'],
+          }
+          with open(os.environ['GITHUB_OUTPUT'],'a') as f:
+              for k,v in vals.items(): f.write(f'{k}={v}\n')
+          print(vals)
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-baseline-tuning
+          path: tuning
+          retention-days: 90
+
+  primary_a:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    needs: [smoke, tune_baselines]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        dataset: [iris01, breast_cancer, wine01, digits01]
+        family: [ryrz_cz, su2_cnot, su2_haar, u1_rzxy]
+        seed: [0,1,2,3,4,5,6,7,8,9]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - name: Run primary full-suite cell
+        run: |
+          python experiments/aqng_validation_gate.py \
+            --family '${{ matrix.family }}' --dataset '${{ matrix.dataset }}' --seed '${{ matrix.seed }}' \
+            --suite full --n-qubits 6 --n-layers 3 --n-samples 60 --steps 20 \
+            --loss-batch 4 --metric-batch 2 --metric-every 2 \
+            --readout-order 1 --alignment-batch 4 \
+            --alignment-tangents 64 --alignment-eval-tangents 64 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --lr-override 'AQNG-Z0=${{ needs.tune_baselines.outputs.z0_lr }}' \
+            --lam-override 'AQNG-Z0=${{ needs.tune_baselines.outputs.z0_lam }}' \
+            --lr-override 'Block-QNG=${{ needs.tune_baselines.outputs.block_lr }}' \
+            --lam-override 'Block-QNG=${{ needs.tune_baselines.outputs.block_lam }}' \
+            --lr-override 'SGD=${{ needs.tune_baselines.outputs.sgd_lr }}' \
+            --lr-override 'Adam=${{ needs.tune_baselines.outputs.adam_lr }}' \
+            --output-dir out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-run-primary-a-${{ matrix.dataset }}-${{ matrix.family }}-s${{ matrix.seed }}
+          path: out
+          retention-days: 90
+
+  primary_b:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    needs: [smoke, tune_baselines]
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      max-parallel: 10
+      matrix:
+        dataset: [iris01, breast_cancer, wine01, digits01]
+        family: [ryrz_cz, su2_cnot, su2_haar, u1_rzxy]
+        seed: [10,11,12,13,14,15,16,17,18,19]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - name: Run primary full-suite cell
+        run: |
+          python experiments/aqng_validation_gate.py \
+            --family '${{ matrix.family }}' --dataset '${{ matrix.dataset }}' --seed '${{ matrix.seed }}' \
+            --suite full --n-qubits 6 --n-layers 3 --n-samples 60 --steps 20 \
+            --loss-batch 4 --metric-batch 2 --metric-every 2 \
+            --readout-order 1 --alignment-batch 4 \
+            --alignment-tangents 64 --alignment-eval-tangents 64 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --lr-override 'AQNG-Z0=${{ needs.tune_baselines.outputs.z0_lr }}' \
+            --lam-override 'AQNG-Z0=${{ needs.tune_baselines.outputs.z0_lam }}' \
+            --lr-override 'Block-QNG=${{ needs.tune_baselines.outputs.block_lr }}' \
+            --lam-override 'Block-QNG=${{ needs.tune_baselines.outputs.block_lam }}' \
+            --lr-override 'SGD=${{ needs.tune_baselines.outputs.sgd_lr }}' \
+            --lr-override 'Adam=${{ needs.tune_baselines.outputs.adam_lr }}' \
+            --output-dir out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-run-primary-b-${{ matrix.dataset }}-${{ matrix.family }}-s${{ matrix.seed }}
+          path: out
+          retention-days: 90
+
+  scaling:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        family: [su2_haar, u1_rzxy]
+        n_qubits: [4,6,8,10]
+        seed: [0,1,2,3,4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - name: Run qubit-scaling cell
+        run: |
+          python experiments/aqng_validation_gate.py \
+            --family '${{ matrix.family }}' --dataset iris01 --seed '${{ matrix.seed }}' \
+            --suite orientation --n-qubits '${{ matrix.n_qubits }}' --n-layers 3 \
+            --n-samples 60 --steps 20 --loss-batch 4 --metric-batch 2 --metric-every 2 \
+            --readout-order 1 --alignment-batch 4 \
+            --alignment-tangents 64 --alignment-eval-tangents 64 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --output-dir out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-run-scaling-${{ matrix.family }}-n${{ matrix.n_qubits }}-s${{ matrix.seed }}
+          path: out
+          retention-days: 90
+
+  depth:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        family: [su2_haar, u1_rzxy]
+        n_layers: [1,3,5]
+        seed: [0,1,2,3,4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - name: Run depth-scaling cell
+        run: |
+          python experiments/aqng_validation_gate.py \
+            --family '${{ matrix.family }}' --dataset iris01 --seed '${{ matrix.seed }}' \
+            --suite orientation --n-qubits 6 --n-layers '${{ matrix.n_layers }}' \
+            --n-samples 60 --steps 20 --loss-batch 4 --metric-batch 2 --metric-every 2 \
+            --readout-order 1 --alignment-batch 4 \
+            --alignment-tangents 64 --alignment-eval-tangents 64 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --output-dir out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-run-depth-${{ matrix.family }}-L${{ matrix.n_layers }}-s${{ matrix.seed }}
+          path: out
+          retention-days: 90
+
+  order:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        dataset: [iris01, digits01]
+        family: [su2_haar, u1_rzxy]
+        readout_order: [1,2]
+        seed: [0,1,2,3,4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - name: Run readout-order cell
+        run: |
+          python experiments/aqng_validation_gate.py \
+            --family '${{ matrix.family }}' --dataset '${{ matrix.dataset }}' --seed '${{ matrix.seed }}' \
+            --suite orientation --n-qubits 6 --n-layers 3 --n-samples 60 --steps 20 \
+            --loss-batch 4 --metric-batch 2 --metric-every 2 \
+            --readout-order '${{ matrix.readout_order }}' --alignment-batch 4 \
+            --alignment-tangents 64 --alignment-eval-tangents 64 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --output-dir out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-run-order-${{ matrix.dataset }}-${{ matrix.family }}-r${{ matrix.readout_order }}-s${{ matrix.seed }}
+          path: out
+          retention-days: 90
+
+  finite:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false
+    needs: smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        dataset: [iris01, digits01]
+        family: [su2_haar, u1_rzxy]
+        shots: [1000,10000]
+        seed: [0,1,2,3,4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - name: Run finite-shot cell
+        run: |
+          python experiments/aqng_validation_gate.py \
+            --family '${{ matrix.family }}' --dataset '${{ matrix.dataset }}' --seed '${{ matrix.seed }}' \
+            --suite orientation --n-qubits 6 --n-layers 3 --n-samples 60 --steps 20 \
+            --loss-batch 4 --metric-batch 2 --metric-every 2 \
+            --readout-order 1 --alignment-batch 4 \
+            --alignment-tangents 64 --alignment-eval-tangents 64 \
+            --lr 0.06 --lam 0.003 --metric-normalization trace \
+            --damping-mode absolute --max-direction-norm 8 --max-metric-step 0.25 \
+            --shots '${{ matrix.shots }}' --finite-shot-calibration --paired-shot-streams \
+            --support-pseudocount 0.5 --cov-lam 1e-3 \
+            --output-dir out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paper-run-finite-${{ matrix.dataset }}-${{ matrix.family }}-q${{ matrix.shots }}-s${{ matrix.seed }}
+          path: out
+          retention-days: 90
+
+  summarize:
+    if: always() && (github.event_name == 'workflow_dispatch' || github.event.pull_request.draft == false)
+    needs: [primary_a, primary_b, scaling, depth, order, finite, tune_baselines]
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: paper-run-*
+          path: downloaded
+      - uses: actions/download-artifact@v4
+        with:
+          name: paper-baseline-tuning
+          path: baseline_tuning
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: pip install pandas numpy scipy
+      - name: Aggregate raw outputs
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import csv, json, shutil
+          root=Path('downloaded'); out=Path('paper_scale_summary'); out.mkdir(exist_ok=True)
+          specs={
+            'results_all.csv':'results_*.csv',
+            'calibration_all.csv':'calibration_diags_*.csv',
+            'orientation_all.csv':'orientation_diags_*.csv',
+            'curves_all.csv':'curves_*.csv',
+            'metric_diags_all.csv':'metric_diags_*.csv',
+          }
+          def read_csv(p):
+              with p.open(newline='',encoding='utf-8') as f: return list(csv.DictReader(f))
+          counts={}
+          for outname, pattern in specs.items():
+              rows=[]
+              for p in root.rglob(pattern):
+                  tag=next((q.name for q in p.parents if q.name.startswith('paper-run-')), p.parent.name)
+                  for row in read_csv(p):
+                      row['paper_tag']=tag
+                      rows.append(row)
+              counts[outname]=len(rows)
+              path=out/outname
+              if not rows:
+                  path.write_text('',encoding='utf-8'); continue
+              keys=[]; seen=set()
+              for row in rows:
+                  for k in row:
+                      if k not in seen: seen.add(k); keys.append(k)
+              with path.open('w',newline='',encoding='utf-8') as f:
+                  w=csv.DictWriter(f,fieldnames=keys); w.writeheader(); w.writerows(rows)
+          for p in Path('baseline_tuning').glob('*'):
+              if p.is_file(): shutil.copy2(p, out/p.name)
+          (out/'manifest.json').write_text(json.dumps(counts,indent=2),encoding='utf-8')
+          print(json.dumps(counts,indent=2))
+          PY
+      - name: Paper-scale statistics
+        run: |
+          python experiments/analyze_paper_scale.py \
+            --results paper_scale_summary/results_all.csv \
+            --calibration paper_scale_summary/calibration_all.csv \
+            --output-dir paper_scale_summary
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aqng-paper-large-scale-summary
+          path: paper_scale_summary
+          retention-days: 90

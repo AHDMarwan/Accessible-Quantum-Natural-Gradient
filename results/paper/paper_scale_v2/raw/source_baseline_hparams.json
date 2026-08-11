@@ -1,0 +1,62 @@
+{
+  "protocol": "Nested validation on Iris01/SU2-Haar only; seed 0; the existing training partition is split with random_state=271828. The published test split and U(1) control are not used for hyperparameter selection.",
+  "fixed_orientation_hparams": {
+    "lr": 0.06,
+    "lam": 0.003
+  },
+  "metric_grid": {
+    "lr": [
+      0.015,
+      0.03,
+      0.06
+    ],
+    "lam": [
+      0.0003,
+      0.001,
+      0.003
+    ]
+  },
+  "euclidean_lr_grid": {
+    "SGD": [
+      0.005,
+      0.015,
+      0.03,
+      0.06,
+      0.1
+    ],
+    "Adam": [
+      0.001,
+      0.003,
+      0.01,
+      0.03,
+      0.06
+    ]
+  },
+  "selected": {
+    "AQNG-Z0": {
+      "lr": 0.06,
+      "lam": 0.003,
+      "validation_loss": 0.3881608616709787,
+      "validation_acc": 1.0
+    },
+    "Adam": {
+      "lr": 0.06,
+      "lam": 0.003,
+      "validation_loss": 0.4709801336583815,
+      "validation_acc": 1.0
+    },
+    "Block-QNG": {
+      "lr": 0.06,
+      "lam": 0.003,
+      "validation_loss": 0.9051038680363144,
+      "validation_acc": 0.5833333333333334
+    },
+    "SGD": {
+      "lr": 0.1,
+      "lam": 0.003,
+      "validation_loss": 0.7019518116251736,
+      "validation_acc": 0.75
+    }
+  },
+  "freeze_rule": "Selected values are frozen before paper-scale outcome inspection."
+}
