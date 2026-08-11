@@ -1,0 +1,43 @@
+\documentclass[aps,pra,reprint,superscriptaddress,nofootinbib]{revtex4-2}
+
+\usepackage{amsmath,amssymb,bm}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{mathtools}
+\usepackage{microtype}
+
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\Gacc}{G_{\mathrm{acc}}}
+\newcommand{\Gq}{G_{\mathrm Q}}
+\newcommand{\Rret}{R}
+\newcommand{\rhoacc}{\rho}
+
+\begin{document}
+
+\title{Accessible Quantum Natural Gradient: Optimization with Measurement-Accessible Tangent Geometry}
+\author{Marwan Ait Haddou}
+\affiliation{Cadi Ayyad University, Morocco}
+\date{\today}
+
+\begin{abstract}
+Natural-gradient methods precondition variational optimization with a state-space information metric, whereas practical quantum learning pipelines act through restricted measurements and low-dimensional classical readouts. We introduce the accessible quantum natural gradient (AQNG), which replaces the full quantum Fisher metric by the pullback of the score geometry visible through a specified measurement interface. For retained commuting readout features, the accessible metric is an exact projected-score Gram matrix, not merely a low-rank numerical approximation to the full QFIM. We evaluate AQNG in a frozen campaign of 470 paper-scale experiment cells, supplemented by 15 matched large/deep cells for Adam and SGD. Across 240 generic dataset--architecture cases, cross-fitted aligned AQNG has the lowest pooled mean test loss, but its advantage over random-rank AQNG and first-order baselines is modest and architecture dependent. In the matched large/deep follow-up, aligned AQNG outperforms SGD in all 15 cases and Full-QNG in 14 of 15, while its difference from Adam is not statistically resolved. Geometry and trainability also separate sharply: in SU(2)-Haar scaling, normalized aligned retention grows far above the random-rank baseline, yet optimization gains are nonmonotonic; in a number-conserving $U(1)$ control, accessibility remains near complete while the supervised gradient collapses by orders of magnitude; and increasing readout order can raise retained tangent mass while worsening optimization through severe metric conditioning. These results support accessible geometry as a controllable and diagnostically interpretable optimization resource, but not as a substitute for task-gradient signal or conditioning.
+\end{abstract}
+
+\maketitle
+
+\input{sections/01_introduction}
+\input{sections/02_accessible_geometry}
+\input{sections/03_algorithm}
+\input{sections/04_protocol}
+\input{sections/05_results}
+\input{sections/06_interpretability}
+\input{sections/07_discussion}
+
+\appendix
+\input{sections/A_implementation}
+\input{sections/B_statistics}
+
+\bibliography{references}
+
+\end{document}

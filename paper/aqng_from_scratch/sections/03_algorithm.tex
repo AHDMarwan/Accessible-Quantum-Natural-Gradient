@@ -1,0 +1,23 @@
+\section{Accessible quantum natural gradient}
+
+Given a supervised loss $L(\bm\theta)$ with Euclidean gradient $g=\nabla_{\bm\theta}L$, AQNG computes a damped preconditioned direction
+\begin{equation}
+ d_{\rm A}=(\widehat G_{\rm acc}+\lambda I)^{-1}g,
+ \qquad
+ \bm\theta\leftarrow\bm\theta-\eta d_{\rm A}.
+ \label{eq:aqng_update}
+\end{equation}
+The full-QNG control replaces $\widehat G_{\rm acc}$ by the full QFIM. In the implementation, the accessible metric can be factorized as $A^{\mathsf T}A$, allowing primal, dual, or SVD-based solves depending on parameter and readout dimensions. Metric evaluations are cached for a fixed number of optimization steps to separate metric-construction cost from the loss-gradient loop.
+
+\subsection{Metric normalization and damping}
+Comparisons between metrics with different overall scales are otherwise confounded by damping. The primary configuration therefore normalizes each metric by its trace before applying a common absolute damping coefficient. Additional controls use no normalization or maximum-eigenvalue normalization and alternative damping conventions based on the mean or maximum eigenvalue. We also impose a Euclidean direction cap and an accessible-metric trust radius. These controls prevent a nearly singular metric from converting a small gradient into an arbitrarily large parameter step. Consequently, update magnitude is not used as evidence that a vanishing-gradient problem has been solved.
+
+\subsection{Rank-matched readout designs}
+The primary readout comparison keeps rank fixed and changes only orientation. The physical readout is the local computational-basis $Z$ span. A random control draws a subspace of exactly the same rank from the centered outcome-function space. The aligned control is fit from an independent calibration set of tangent scores: the leading rank-matched score directions are estimated on calibration tangents and then frozen before optimization and evaluation. Labels are not used in this calibration step. This cross-fit construction avoids evaluating an aligned subspace on the same tangent sample used to fit it.
+
+The rank-matched comparison is important because increasing the number of retained observables changes both dimension and orientation. By holding rank fixed, physical, random, and aligned AQNG test whether orientation relative to the tangent covariance changes optimization at a fixed readout dimension. A separate readout-order ablation deliberately changes rank by moving from weight-one diagonal Pauli functions to all diagonal strings through weight two.
+
+\subsection{Finite-shot estimation}
+In finite-shot mode, all retained diagonal features are derived from the same computational-basis bitstrings. Known outcome support is fixed structurally rather than inferred from observed nonzero counts. For the number-conserving control, the support is the corresponding fixed-Hamming-weight sector. A symmetric Dirichlet pseudocount regularizes empirical probabilities on that known support before constructing score and covariance estimates. This prevents unobserved-but-allowed outcomes from producing artificial support collapse at finite shot count.
+
+The finite-shot Full-QNG control uses an analytic full metric while its loss is sampled. It is therefore an optimizer reference, not a hardware-resource-matched baseline. Shot accounting for AQNG reports calibration and training resources separately.
