@@ -1,0 +1,37 @@
+{
+  "protocol_frozen": {
+    "lr": 0.06,
+    "lam": 0.003,
+    "metric_normalization": "trace",
+    "damping_mode": "absolute",
+    "max_direction_norm": 8.0,
+    "max_metric_step": 0.25,
+    "steps": 20,
+    "primary_n_qubits": 6,
+    "primary_n_layers": 3,
+    "primary_readout_order": 1
+  },
+  "completeness": {
+    "expected_primary_dataset_family_seed_cells": 320,
+    "observed_primary_dataset_family_seed_cells": 0,
+    "primary_complete": false,
+    "primary_method_rows": {},
+    "results_rows_total": 3160,
+    "calibration_rows_total": 470
+  },
+  "orientation_task_relation": {},
+  "output_rows": {
+    "primary_summary.csv": 0,
+    "finite_shot_summary.csv": 0,
+    "scaling_summary.csv": 0,
+    "depth_summary.csv": 0,
+    "readout_order_summary.csv": 0,
+    "primary_geometry_summary.csv": 0,
+    "finite_geometry_summary.csv": 0,
+    "scaling_geometry_summary.csv": 0,
+    "depth_geometry_summary.csv": 0,
+    "readout_order_geometry_summary.csv": 0,
+    "paired_primary_tests.csv": 0,
+    "finite_resource_summary.csv": 0
+  }
+}
