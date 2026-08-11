@@ -1,0 +1,68 @@
+name: AQNG validation tune
+
+on:
+  push:
+    branches: [aqng-v2-validation-gate]
+    paths:
+      - 'aqng_validation.py'
+      - 'experiments/aqng_hparam_tune.py'
+      - 'experiments/aqng_validation_gate.py'
+      - '.github/workflows/aqng-validation-tune.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  OMP_NUM_THREADS: '2'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+
+jobs:
+  tune:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        method: [AQNG-physical, AQNG-random, AQNG-aligned, Full-QNG]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - run: pip install -e '.[experiments]'
+      - run: python experiments/aqng_hparam_tune.py --method '${{ matrix.method }}' --output 'tune/${{ matrix.method }}.json'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: tune-${{ matrix.method }}
+          path: tune/${{ matrix.method }}.json
+          retention-days: 14
+
+  summarize:
+    runs-on: ubuntu-latest
+    needs: tune
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: tune-*
+          path: downloaded
+      - run: |
+          python - <<'PY'
+          from pathlib import Path
+          import json
+          rows=[]
+          for p in Path('downloaded').rglob('*.json'):
+              d=json.loads(p.read_text())
+              rows.append(d['best'])
+          rows.sort(key=lambda x:x['method'])
+          Path('summary').mkdir()
+          Path('summary/best.json').write_text(json.dumps(rows,indent=2))
+          print(json.dumps(rows,indent=2))
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aqng-validation-tuning-summary
+          path: summary/best.json
+          retention-days: 14
