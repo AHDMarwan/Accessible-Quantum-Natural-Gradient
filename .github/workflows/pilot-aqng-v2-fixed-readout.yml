@@ -1,0 +1,140 @@
+name: AQNG v2 finite-shot fixed-readout pilot
+
+on:
+  pull_request:
+    paths:
+      - 'experiments/pilot_aqng_v2.py'
+      - '.github/workflows/pilot-aqng-v2-fixed-readout.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+env:
+  PYTHONUNBUFFERED: '1'
+  OMP_NUM_THREADS: '2'
+  OPENBLAS_NUM_THREADS: '1'
+  MKL_NUM_THREADS: '1'
+  NUMEXPR_NUM_THREADS: '1'
+
+jobs:
+  pilot:
+    name: ${{ matrix.tag }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        include:
+          - tag: fixedcal-shots1k-haar-s0
+            family: su2_haar
+            shots: 1000
+          - tag: fixedcal-shots10k-haar-s0
+            family: su2_haar
+            shots: 10000
+          - tag: fixedcal-shots1k-u1-s0
+            family: u1_rzxy
+            shots: 1000
+          - tag: fixedcal-shots10k-u1-s0
+            family: u1_rzxy
+            shots: 10000
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: pip
+      - name: Install AQNG experiment stack
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[experiments]"
+      - name: Run finite-shot training with fixed analytic calibration
+        run: |
+          python experiments/pilot_aqng_v2.py \
+            --family '${{ matrix.family }}' \
+            --dataset iris01 \
+            --seed 0 \
+            --n-qubits 6 \
+            --n-layers 3 \
+            --n-samples 60 \
+            --steps 4 \
+            --loss-batch 4 \
+            --metric-batch 2 \
+            --metric-every 2 \
+            --readout-order 1 \
+            --alignment-batch 4 \
+            --alignment-tangents 32 \
+            --alignment-eval-tangents 32 \
+            --metric-normalization trace \
+            --damping-mode absolute \
+            --max-direction-norm 8 \
+            --max-metric-step 0.25 \
+            --shots '${{ matrix.shots }}' \
+            --cov-lam 1e-3 \
+            --output-dir 'fixed_outputs/${{ matrix.tag }}'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.tag }}
+          path: fixed_outputs/${{ matrix.tag }}
+          retention-days: 14
+
+  summarize:
+    name: summarize fixed-readout pilot
+    runs-on: ubuntu-latest
+    needs: pilot
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: fixedcal-*
+          path: downloaded
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Aggregate results
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          import csv, json
+          root = Path('downloaded')
+          out = Path('fixed_summary'); out.mkdir(exist_ok=True)
+
+          def collect(pattern):
+              rows=[]
+              for p in root.rglob(pattern):
+                  tag=p.relative_to(root).parts[0]
+                  with p.open(newline='', encoding='utf-8') as f:
+                      for row in csv.DictReader(f):
+                          row['pilot_tag']=tag
+                          rows.append(row)
+              return rows
+
+          def write(name, rows):
+              path=out/name
+              if not rows:
+                  path.write_text('',encoding='utf-8'); return
+              keys=[]; seen=set()
+              for r in rows:
+                  for k in r:
+                      if k not in seen:
+                          seen.add(k); keys.append(k)
+              with path.open('w',newline='',encoding='utf-8') as f:
+                  w=csv.DictWriter(f,fieldnames=keys); w.writeheader(); w.writerows(rows)
+
+          results=collect('results_*.csv')
+          calibration=collect('calibration_diags_*.csv')
+          orientation=collect('orientation_diags_*.csv')
+          write('results_all.csv',results)
+          write('calibration_all.csv',calibration)
+          write('orientation_all.csv',orientation)
+          (out/'manifest.json').write_text(json.dumps({
+              'result_rows':len(results),
+              'calibration_rows':len(calibration),
+              'orientation_rows':len(orientation),
+          },indent=2),encoding='utf-8')
+          print((out/'manifest.json').read_text())
+          PY
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aqng-v2-fixed-readout-pilot-summary
+          path: fixed_summary
+          retention-days: 14
