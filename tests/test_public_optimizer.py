@@ -1,5 +1,6 @@
 import numpy as np
 import pytest
+from pennylane import numpy as pnp
 
 from aqng import AQNGOptimizer, ReadoutMode
 
@@ -41,3 +42,33 @@ def test_fit_and_switch_rank_matched_readouts():
     aligned_design = opt.set_readout("aligned").readout_design
     assert aligned_design.name == "aligned_crossfit"
     assert aligned_design.rank == physical.rank
+
+
+def test_standalone_calibrate_from_probability_callable():
+    def probability_fn(params):
+        logits = pnp.stack([params[0], params[1], -params[0], -params[1]])
+        weights = pnp.exp(logits)
+        return weights / pnp.sum(weights)
+
+    params = pnp.array([0.17, -0.23], requires_grad=True)
+    opt = AQNGOptimizer(
+        readout="aligned",
+        probability_fn=probability_fn,
+        readout_order=1,
+        seed=7,
+    )
+    design = opt.calibrate(params, n_qubits=2, n_directions=16)
+
+    assert design.name == "aligned_crossfit"
+    assert design.rank == 2
+    assert opt.readout_design is design
+
+    random_design = opt.set_readout("random").readout_design
+    assert random_design.rank == design.rank
+
+
+def test_standalone_calibrate_requires_probability_fn():
+    opt = AQNGOptimizer(readout="physical")
+    params = pnp.array([0.1, 0.2], requires_grad=True)
+    with pytest.raises(RuntimeError, match="requires probability_fn"):
+        opt.calibrate(params, n_qubits=2)
