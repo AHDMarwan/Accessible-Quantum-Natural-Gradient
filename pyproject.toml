@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "aqng-pennylane"
 version = "0.6.0"
-description = "Accessible Quantum Natural Gradient optimizers and readout-geometry controls for PennyLane"
+description = "Accessible Quantum Natural Gradient optimizer with physical, random, and aligned measurement-aware readouts for PennyLane"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
