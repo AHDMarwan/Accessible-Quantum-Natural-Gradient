@@ -9,6 +9,28 @@ Given a supervised loss $L(\bm\theta)$ with Euclidean gradient $g=\nabla_{\bm\th
 \end{equation}
 The full-QNG control replaces $\widehat G_{\rm acc}$ by the full QFIM. In the implementation, the accessible metric can be factorized as $A^{\mathsf T}A$, allowing primal, dual, or SVD-based solves depending on parameter and readout dimensions. Metric evaluations are cached for a fixed number of optimization steps to separate metric-construction cost from the loss-gradient loop.
 
+\begin{figure*}[t]
+\centering
+\fbox{%
+\begin{minipage}{0.94\textwidth}
+\textbf{Pseudo-algorithm: Accessible quantum natural gradient (AQNG)}\\[2pt]
+\textbf{Input:} initial parameters $\bm\theta_0$, learning rate $\eta$, damping $\lambda$, metric refresh period $K$, supervised minibatches $\{\mathcal B_t\}$, metric minibatches $\{\mathcal M_t\}$, commuting readout family $F$, optional calibration tangents $\mathcal C$.\\[4pt]
+\textbf{1. Optional calibration.} If an aligned readout is used, estimate a rank-matched retained subspace from the calibration tangents $\mathcal C$ and freeze it before supervised training.\\[3pt]
+\textbf{2. For $t=0,1,\ldots,T-1$:}
+\begin{enumerate}
+  \item Estimate the supervised gradient $g_t=\nabla_{\bm\theta}L_{\mathcal B_t}(\bm\theta_t)$.
+  \item If $t=0$ or $t\bmod K=0$, estimate outcome probabilities and score vectors on $\mathcal M_t$; build the centered readout matrix $B_t$; compute $J_t=B_t^{\mathsf T}S_t$ and $\Sigma_t=B_t^{\mathsf T}B_t$; then form the accessible metric $\widehat G_{{\rm acc},t}=J_t^{\mathsf T}\Sigma_t^{+}J_t$.
+  \item Normalize $\widehat G_{{\rm acc},t}$ and apply the damping and trust-region controls.
+  \item Solve $d_t=(\widehat G_{{\rm acc},t}+\lambda I)^{-1}g_t$.
+  \item Clip $d_t$ if the Euclidean step norm or the metric trust radius exceeds its cap.
+  \item Update $\bm\theta_{t+1}=\bm\theta_t-\eta d_t$.
+\end{enumerate}
+\textbf{3. Output:} final parameters $\bm\theta_T$.
+\end{minipage}}
+\caption{Pseudo-algorithm for AQNG. The metric can be refreshed less often than the loss gradient and can use an independently sampled metric minibatch.}
+\label{fig:aqng_pseudocode}
+\end{figure*}
+
 \subsection{Metric normalization and damping}
 Comparisons between metrics with different overall scales are otherwise confounded by damping. The primary configuration therefore normalizes each metric by its trace before applying a common absolute damping coefficient. Additional controls use no normalization or maximum-eigenvalue normalization and alternative damping conventions based on the mean or maximum eigenvalue. We also impose a Euclidean direction cap and an accessible-metric trust radius. These controls prevent a nearly singular metric from converting a small gradient into an arbitrarily large parameter step. Consequently, update magnitude is not used as evidence that a vanishing-gradient problem has been solved.
 
