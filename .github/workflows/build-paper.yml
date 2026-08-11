@@ -15,6 +15,10 @@ on:
 permissions:
   contents: write
 
+concurrency:
+  group: aqng-paper-main
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -38,14 +42,15 @@ jobs:
       - name: Store canonical PDF on main
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          cp paper/manuscript/main.pdf paper/manuscript/AQNG_paper.pdf
+          cp paper/manuscript/main.pdf /tmp/AQNG_paper.pdf
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git fetch origin main
+          git reset --hard origin/main
+          cp /tmp/AQNG_paper.pdf paper/manuscript/AQNG_paper.pdf
           git add paper/manuscript/AQNG_paper.pdf
           if git diff --cached --quiet; then
             exit 0
           fi
           git commit -m "Build AQNG manuscript PDF"
-          git fetch origin main
-          git rebase origin/main
           git push origin HEAD:main
