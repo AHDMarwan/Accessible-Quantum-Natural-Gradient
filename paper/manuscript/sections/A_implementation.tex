@@ -1,6 +1,6 @@
 \section{Implementation details}
 
-The reference implementation uses PennyLane 0.45.x with Autograd-compatible circuit derivatives. The accessible metric is formed from retained computational-basis outcome functions and supports primal, dual, and singular-value-based linear solves. In the paper-scale configuration, metrics are trace-normalized, damped with an absolute coefficient $\lambda=0.003$, refreshed every two optimization steps, and combined with a Euclidean direction cap and an accessible-metric trust radius. These controls are fixed before the main benchmark is evaluated.
+The reference implementation uses PennyLane 0.45.x with Autograd-compatible circuit derivatives. The accessible metric is formed from retained computational-basis outcome functions and supports primal, dual, and singular-value-based linear solves. In the reference configuration, metrics are trace-normalized, damped with an absolute coefficient $\lambda=0.003$, refreshed every two optimization steps, and combined with a Euclidean direction cap and an accessible-metric trust radius. These controls are fixed before the main benchmark is evaluated.
 
 The primary physical readout uses local $Z$ functions. Rank-matched aligned and random controls have exactly the same retained dimension. The aligned basis is estimated from 64 calibration tangents and evaluated on an independent set of 64 held-out tangents before being frozen for training. The order-two ablation replaces the weight-one span by all diagonal Pauli strings through weight two.
 
