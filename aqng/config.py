@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
-from typing import Optional
+from typing import Optional, Tuple
 
 
 @dataclass(frozen=True)
@@ -26,6 +26,10 @@ class AQNGConfig:
     metric_normalization: str = "none"
     normalization_target: Optional[float] = None
     damping_mode: str = "absolute"
+    shots: Optional[int] = None
+    pseudocount: float = 0.5
+    support_policy: str = "full"
+    support_indices: Optional[Tuple[int, ...]] = None
     seed: int = 0
     readout_order: int = 1
 
@@ -54,14 +58,37 @@ class AQNGConfig:
             raise ValueError("normalization_target must be positive or None")
         if self.damping_mode not in {"absolute", "mean_eig", "maxeig"}:
             raise ValueError("damping_mode must be absolute, mean_eig, or maxeig")
+        if self.shots is not None and int(self.shots) < 1:
+            raise ValueError("shots must be a positive integer or None")
+        if self.pseudocount < 0:
+            raise ValueError("pseudocount must be nonnegative")
+        if self.support_policy not in {"full", "custom"}:
+            raise ValueError("support_policy must be full or custom")
+        if self.support_policy == "custom":
+            if self.support_indices is None or len(tuple(self.support_indices)) < 2:
+                raise ValueError("custom support requires at least two support indices")
+            indices = tuple(int(i) for i in self.support_indices)
+            if min(indices) < 0 or len(set(indices)) != len(indices):
+                raise ValueError("support_indices must be unique nonnegative integers")
+            object.__setattr__(self, "support_indices", indices)
+        elif self.support_indices is not None:
+            object.__setattr__(
+                self, "support_indices", tuple(int(i) for i in self.support_indices)
+            )
         if self.readout_order < 1:
             raise ValueError("readout_order must be >= 1")
         if self.readout not in {"physical", "random", "aligned"}:
             raise ValueError("readout must be physical, random, or aligned")
 
     def to_dict(self) -> dict:
-        return asdict(self)
+        values = asdict(self)
+        if values["support_indices"] is not None:
+            values["support_indices"] = list(values["support_indices"])
+        return values
 
     @classmethod
     def from_dict(cls, values: dict) -> "AQNGConfig":
-        return cls(**dict(values))
+        data = dict(values)
+        if data.get("support_indices") is not None:
+            data["support_indices"] = tuple(int(i) for i in data["support_indices"])
+        return cls(**data)
