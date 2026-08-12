@@ -40,6 +40,10 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
             metric_normalization=core.metric_normalization,
             normalization_target=core.normalization_target,
             damping_mode=core.damping_mode,
+            shots=self.shots,
+            pseudocount=self.pseudocount,
+            support_policy=self.support_policy,
+            support_indices=self.support_indices,
             seed=self.seed,
             readout_order=self.readout_order,
         )
@@ -59,14 +63,21 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         svd_tolerance: float = 1e-10,
         **calibration_kwargs,
     ):
-        if self.probability_fn is None:
+        """Fit and bind physical/random/aligned readouts.
+
+        Calibration uses the same stabilized probability interface as subsequent
+        AQNG metric construction. With finite ``shots`` this includes the fixed
+        support and symmetric Dirichlet pseudocount configured on the optimizer.
+        """
+        probability_fn = self.metric_probability_fn
+        if probability_fn is None:
             raise RuntimeError(
                 "calibrate() requires probability_fn. Pass it to AQNGOptimizer(...) "
                 "or call bind_probability_fn(...) first."
             )
         rng_seed = self.seed if seed is None else int(seed)
         rows, p_ref, _support = calibration_score_rows(
-            self.probability_fn,
+            probability_fn,
             params,
             *calibration_args,
             directions=directions,

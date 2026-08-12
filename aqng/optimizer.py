@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from enum import Enum
-from typing import Callable, Mapping, Optional
+from typing import Callable, Mapping, Optional, Sequence
 
 import numpy as np
 
@@ -15,6 +15,7 @@ except ImportError as exc:  # pragma: no cover
 
 from aqng_readouts import ReadoutDesign, fit_rank_matched_readouts
 from .core import ControlledAQNGCore
+from .sampling import stabilized_probability_fn, validate_sampling_configuration
 
 ArrayFn = Callable[..., object]
 
@@ -47,10 +48,10 @@ def _normalize_readout(value: str | ReadoutMode) -> str:
 class AQNGOptimizer:
     """Reusable Accessible Quantum Natural Gradient optimizer.
 
-    ``metric_normalization`` controls the global scale of the accessible metric:
-    ``'none'``, ``'trace'``, or ``'maxeig'``. ``damping_mode`` controls whether
-    ``lam`` is absolute or scaled by the mean or maximum eigenvalue of the
-    normalized metric.
+    ``shots`` describes the sampling budget used by the bound probability
+    callable. The optimizer does not mutate a QNode's device shots; instead it
+    applies a differentiable fixed-support Dirichlet regularization to the
+    returned probabilities before constructing AQNG readout geometry.
     """
 
     def __init__(
@@ -73,15 +74,33 @@ class AQNGOptimizer:
         metric_normalization: str = "none",
         normalization_target: Optional[float] = None,
         damping_mode: str = "absolute",
+        shots: Optional[int] = None,
+        pseudocount: float = 0.5,
+        support_policy: str = "full",
+        support_indices: Optional[Sequence[int]] = None,
         seed: int = 0,
         readout_order: int = 1,
     ):
         self.readout = _normalize_readout(readout)
-        self.probability_fn = probability_fn
         self.seed = int(seed)
         self.readout_order = int(readout_order)
         if self.readout_order < 1:
             raise ValueError("readout_order must be >= 1")
+
+        validate_sampling_configuration(
+            shots=shots,
+            pseudocount=pseudocount,
+            support_policy=support_policy,
+            support_indices=support_indices,
+        )
+        self.shots = None if shots is None else int(shots)
+        self.pseudocount = float(pseudocount)
+        self.support_policy = str(support_policy)
+        self.support_indices = (
+            None if support_indices is None else tuple(int(i) for i in support_indices)
+        )
+        self.probability_fn: Optional[ArrayFn] = None
+        self._metric_probability_fn: Optional[ArrayFn] = None
 
         self._designs: Optional[Mapping[str, ReadoutDesign]] = None
         self._design: Optional[ReadoutDesign] = None
@@ -105,6 +124,8 @@ class AQNGOptimizer:
             normalization_target=normalization_target,
             damping_mode=damping_mode,
         )
+        if probability_fn is not None:
+            self.bind_probability_fn(probability_fn)
 
     @property
     def core(self) -> ControlledAQNGCore:
@@ -125,6 +146,16 @@ class AQNGOptimizer:
     @property
     def metric_scale(self) -> float:
         return float(self._core.last_metric_scale)
+
+    @property
+    def finite_shot(self) -> bool:
+        """Whether the optimizer is configured for finite-shot probabilities."""
+        return self.shots is not None
+
+    @property
+    def metric_probability_fn(self) -> Optional[ArrayFn]:
+        """Probability callable actually used to construct/calibrate AQNG geometry."""
+        return self._metric_probability_fn
 
     @property
     def readout_design(self) -> Optional[ReadoutDesign]:
@@ -186,9 +217,9 @@ class AQNGOptimizer:
         if internal not in self._designs:
             raise KeyError(f"readout design {internal!r} is not present")
         self._design = self._designs[internal]
-        if self.probability_fn is not None:
+        if self._metric_probability_fn is not None:
             self._feature_fn, self._covariance_fn = self._functions_from_design(
-                self.probability_fn, self._design
+                self._metric_probability_fn, self._design
             )
 
     @staticmethod
@@ -217,10 +248,18 @@ class AQNGOptimizer:
         return feature_fn, covariance_fn
 
     def bind_probability_fn(self, probability_fn: ArrayFn) -> "AQNGOptimizer":
+        """Bind a probability callable and apply the configured sampling policy."""
         self.probability_fn = probability_fn
+        self._metric_probability_fn = stabilized_probability_fn(
+            probability_fn,
+            shots=self.shots,
+            pseudocount=self.pseudocount,
+            support_policy=self.support_policy,
+            support_indices=self.support_indices,
+        )
         if self._design is not None:
             self._feature_fn, self._covariance_fn = self._functions_from_design(
-                probability_fn, self._design
+                self._metric_probability_fn, self._design
             )
         self._core.reset_metric()
         return self

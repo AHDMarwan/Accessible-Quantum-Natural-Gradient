@@ -28,6 +28,10 @@ AQNGOptimizer(
     metric_normalization="none",
     normalization_target=None,
     damping_mode="absolute",
+    shots=None,
+    pseudocount=0.5,
+    support_policy="full",
+    support_indices=None,
     seed=0,
     readout_order=1,
 )
@@ -52,6 +56,10 @@ AQNGOptimizer(
 - `metric_normalization`: global metric-scale convention: `"none"`, `"trace"`, or `"maxeig"`.
 - `normalization_target`: optional positive target. For `"trace"`, the default target is the parameter dimension; for `"maxeig"`, the default target is `1`.
 - `damping_mode`: `"absolute"`, `"mean_eig"`, or `"maxeig"`. Relative modes multiply `lam` by the corresponding scale of the normalized metric.
+- `shots`: sampling budget used by the bound probability QNode/callable. `None` selects analytic mode. AQNG does not mutate the device shot configuration; this value controls probability regularization and records the intended metric sampling budget.
+- `pseudocount`: symmetric Dirichlet pseudocount in count units for finite-shot probabilities.
+- `support_policy`: `"full"` for the complete computational basis or `"custom"` for a known structural support.
+- `support_indices`: fixed outcome indices retained when `support_policy="custom"`.
 - `seed`: seed used for random rank-matched readouts and default calibration directions.
 - `readout_order`: maximum diagonal Pauli/Walsh weight used to define the physical readout family.
 
@@ -67,6 +75,9 @@ config = AQNGConfig(
     metric_every=2,
     metric_normalization="trace",
     damping_mode="absolute",
+    shots=1000,
+    pseudocount=0.5,
+    support_policy="full",
     max_direction_norm=8.0,
     max_metric_step=0.25,
     readout_order=1,
@@ -79,7 +90,44 @@ optimizer = AQNGOptimizer.from_config(
 )
 ```
 
-`AQNGConfig` contains serializable numerical/readout policy only. User callables and datasets are deliberately excluded.
+`AQNGConfig` contains serializable numerical/readout/sampling policy only. User callables and datasets are deliberately excluded.
+
+## Finite-shot and hardware use
+
+The probability callable should be a differentiable probability QNode or equivalent function. Configure the actual hardware/simulator shot count on that QNode/device and pass the same intended budget to `AQNGOptimizer(shots=...)`.
+
+```python
+optimizer = AQNGOptimizer(
+    probability_fn=probability_qnode,
+    readout="physical",
+    shots=2000,
+    pseudocount=0.5,
+    support_policy="full",
+)
+```
+
+AQNG wraps the returned probabilities with a differentiable fixed-support stabilization. For a support of size `K`, finite-shot values are regularized as
+
+```text
+p_i -> (shots * p_i + pseudocount) / (shots + pseudocount * K).
+```
+
+This prevents zero-count outcomes from changing the metric support or readout rank from one shot budget to another.
+
+For a known symmetry sector, provide a structural support explicitly:
+
+```python
+optimizer = AQNGOptimizer(
+    probability_fn=probability_qnode,
+    shots=2000,
+    support_policy="custom",
+    support_indices=allowed_outcomes,
+)
+```
+
+Outcomes outside the custom support are masked, the retained mass is renormalized, and the pseudocount is applied only on the allowed support. The support must be known from the model/measurement structure; it should not be inferred from whichever outcomes happened to receive nonzero counts in one run.
+
+`optimizer.finite_shot` reports whether a finite shot budget is configured. `optimizer.metric_probability_fn` exposes the stabilized probability callable used internally for calibration and metric construction.
 
 ## Calibration
 
@@ -92,7 +140,7 @@ optimizer.calibrate(
 )
 ```
 
-Calibration differentiates `probability_fn` with respect to the trainable parameter array, builds normalized tangent-score rows, and fits the equal-rank physical, random, and aligned designs. The aligned design must be calibrated on inputs independent of the supervised minibatch used for evaluation.
+Calibration differentiates the stabilized probability callable with respect to the trainable parameter array, builds normalized tangent-score rows, and fits the equal-rank physical, random, and aligned designs. The aligned design must be calibrated on inputs independent of the supervised minibatch used for evaluation.
 
 Custom tangent directions can be supplied explicitly with `directions=...`.
 
@@ -135,7 +183,7 @@ restored = AQNGOptimizer.load(
 )
 ```
 
-The state archive stores hyperparameters and calibrated readout designs. It does **not** pickle or serialize Python callables, objective functions, datasets, or cached metric tensors. The archive is a ZIP containing JSON metadata and NumPy arrays loaded with `allow_pickle=False`.
+The state archive stores hyperparameters, sampling/support policy, and calibrated readout designs. It does **not** pickle or serialize Python callables, objective functions, datasets, or cached metric tensors. The archive is a ZIP containing JSON metadata and NumPy arrays loaded with `allow_pickle=False`.
 
 ## Diagnostics
 
