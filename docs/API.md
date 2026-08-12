@@ -25,6 +25,9 @@ AQNGOptimizer(
     rcond=1e-10,
     project_cov_psd=True,
     reduction="mean",
+    metric_normalization="none",
+    normalization_target=None,
+    damping_mode="absolute",
     seed=0,
     readout_order=1,
 )
@@ -35,7 +38,7 @@ AQNGOptimizer(
 - `stepsize`: parameter update learning rate.
 - `readout`: one of `"physical"`, `"random"`, or `"aligned"`.
 - `probability_fn`: differentiable callable returning computational-basis probabilities with shape `(D,)` or `(B, D)`.
-- `lam`: nonnegative Tikhonov damping applied to the accessible natural-gradient solve.
+- `lam`: nominal nonnegative damping coefficient.
 - `cov_lam`: nonnegative regularization used when whitening the retained feature covariance.
 - `metric_every`: number of optimizer steps between scheduled metric refreshes.
 - `adaptive_refresh`: rebuild stale geometry when the cached metric produces an anomalous direction.
@@ -46,8 +49,13 @@ AQNGOptimizer(
 - `rcond`: relative numerical tolerance for pseudoinverses and rank decisions.
 - `project_cov_psd`: project numerical feature covariances onto the PSD cone before whitening.
 - `reduction`: `"mean"` or `"sum"` across the metric minibatch.
+- `metric_normalization`: global metric-scale convention: `"none"`, `"trace"`, or `"maxeig"`.
+- `normalization_target`: optional positive target. For `"trace"`, the default target is the parameter dimension; for `"maxeig"`, the default target is `1`.
+- `damping_mode`: `"absolute"`, `"mean_eig"`, or `"maxeig"`. Relative modes multiply `lam` by the corresponding scale of the normalized metric.
 - `seed`: seed used for random rank-matched readouts and default calibration directions.
 - `readout_order`: maximum diagonal Pauli/Walsh weight used to define the physical readout family.
+
+After a metric solve, `optimizer.metric_scale` reports the multiplicative scale applied to the raw accessible metric and `optimizer.effective_damping` reports the actual damping used by the linear system.
 
 ## Typed configuration
 
@@ -57,6 +65,8 @@ config = AQNGConfig(
     readout="aligned",
     lam=3e-3,
     metric_every=2,
+    metric_normalization="trace",
+    damping_mode="absolute",
     max_direction_norm=8.0,
     max_metric_step=0.25,
     readout_order=1,
@@ -134,6 +144,8 @@ After a successful step:
 ```python
 diag = optimizer.diagnostics
 metric = optimizer.metric_tensor
+scale = optimizer.metric_scale
+damping = optimizer.effective_damping
 ```
 
 Diagnostics include metric rank/trace/condition estimate, solver and solve dimension, gradient/direction norms, trust-region clipping, refresh state, and timing information.
