@@ -1,14 +1,4 @@
-"""High-level reusable optimizer facade for AQNG.
-
-The experimental code historically exposed the optimizer core and readout-design
-utilities separately.  :class:`AQNGOptimizer` provides one public object that
-selects the readout strategy, stores all optimizer controls, and delegates the
-validated numerical step to :class:`aqng_efficient.AQNGEfficientOptimizer`.
-
-The public readout names are ``physical``, ``random``, and ``aligned``.  The
-latter two map to the validated internal design names ``random_rank`` and
-``aligned_crossfit``.
-"""
+"""High-level reusable optimizer facade for AQNG."""
 
 from __future__ import annotations
 
@@ -23,8 +13,8 @@ try:
 except ImportError as exc:  # pragma: no cover
     raise ImportError("AQNGOptimizer requires PennyLane.") from exc
 
-from aqng_efficient import AQNGEfficientOptimizer
 from aqng_readouts import ReadoutDesign, fit_rank_matched_readouts
+from .core import ControlledAQNGCore
 
 ArrayFn = Callable[..., object]
 
@@ -57,26 +47,10 @@ def _normalize_readout(value: str | ReadoutMode) -> str:
 class AQNGOptimizer:
     """Reusable Accessible Quantum Natural Gradient optimizer.
 
-    Parameters
-    ----------
-    stepsize
-        Parameter-update learning rate.
-    readout
-        Readout strategy: ``'physical'``, ``'random'``, or ``'aligned'``.
-    probability_fn
-        Optional callable returning computational-basis probabilities.  When a
-        :class:`~aqng_readouts.ReadoutDesign` is fitted/bound, this is used to
-        construct differentiable feature and covariance functions automatically.
-    lam, cov_lam, metric_every, adaptive_refresh, refresh_direction_growth,
-    max_direction_norm, max_metric_step, solver, rcond, project_cov_psd,
-    reduction
-        Numerical controls delegated to the validated efficient AQNG core.
-
-    Notes
-    -----
-    ``aligned`` is a cross-fitted readout and therefore requires an independent
-    calibration sample.  The optimizer never silently fits alignment on the
-    supervised minibatch used for the update.
+    ``metric_normalization`` controls the global scale of the accessible metric:
+    ``'none'``, ``'trace'``, or ``'maxeig'``. ``damping_mode`` controls whether
+    ``lam`` is absolute or scaled by the mean or maximum eigenvalue of the
+    normalized metric.
     """
 
     def __init__(
@@ -96,6 +70,9 @@ class AQNGOptimizer:
         rcond: float = 1e-10,
         project_cov_psd: bool = True,
         reduction: str = "mean",
+        metric_normalization: str = "none",
+        normalization_target: Optional[float] = None,
+        damping_mode: str = "absolute",
         seed: int = 0,
         readout_order: int = 1,
     ):
@@ -111,7 +88,7 @@ class AQNGOptimizer:
         self._feature_fn: Optional[ArrayFn] = None
         self._covariance_fn: Optional[ArrayFn] = None
 
-        self._core = AQNGEfficientOptimizer(
+        self._core = ControlledAQNGCore(
             stepsize=stepsize,
             lam=lam,
             cov_lam=cov_lam,
@@ -124,11 +101,13 @@ class AQNGOptimizer:
             rcond=rcond,
             project_cov_psd=project_cov_psd,
             reduction=reduction,
+            metric_normalization=metric_normalization,
+            normalization_target=normalization_target,
+            damping_mode=damping_mode,
         )
 
     @property
-    def core(self) -> AQNGEfficientOptimizer:
-        """Validated low-level optimizer used for the numerical step."""
+    def core(self) -> ControlledAQNGCore:
         return self._core
 
     @property
@@ -140,12 +119,19 @@ class AQNGOptimizer:
         return self._core.metric_tensor
 
     @property
+    def effective_damping(self) -> Optional[float]:
+        return self._core.last_effective_damping
+
+    @property
+    def metric_scale(self) -> float:
+        return float(self._core.last_metric_scale)
+
+    @property
     def readout_design(self) -> Optional[ReadoutDesign]:
         return self._design
 
     @property
     def readout_name(self) -> str:
-        """Canonical public readout name."""
         if self.readout in ("random_rank", "random"):
             return "random"
         if self.readout in ("aligned_crossfit", "aligned"):
@@ -153,7 +139,6 @@ class AQNGOptimizer:
         return "physical"
 
     def set_readout(self, readout: str | ReadoutMode) -> "AQNGOptimizer":
-        """Switch to another already-fitted rank-matched readout design."""
         self.readout = _normalize_readout(readout)
         if self._designs is not None:
             self._bind_selected_design()
@@ -171,11 +156,6 @@ class AQNGOptimizer:
         probability_floor: float = 1e-13,
         svd_tolerance: float = 1e-10,
     ) -> ReadoutDesign:
-        """Fit the three same-rank designs and bind the selected strategy.
-
-        ``score_rows`` must come from an independent calibration sample when the
-        selected strategy is ``aligned``.
-        """
         order = self.readout_order if readout_order is None else int(readout_order)
         rng_seed = self.seed if seed is None else int(seed)
         self._designs = fit_rank_matched_readouts(
@@ -194,7 +174,6 @@ class AQNGOptimizer:
     def bind_readout_designs(
         self, designs: Mapping[str, ReadoutDesign]
     ) -> ReadoutDesign:
-        """Bind precomputed physical/random/aligned designs."""
         self._designs = designs
         self._bind_selected_design()
         self._core.reset_metric()
@@ -219,15 +198,11 @@ class AQNGOptimizer:
         features = pnp.array(design.outcome_features, requires_grad=False)
 
         def feature_fn(params, *args, **kwargs):
-            probs = probability_fn(params, *args, **kwargs)
-            probs = qml.math.asarray(probs)
-            if qml.math.ndim(probs) == 1:
-                return qml.math.dot(probs, features)
+            probs = qml.math.asarray(probability_fn(params, *args, **kwargs))
             return qml.math.dot(probs, features)
 
         def covariance_fn(params, *args, **kwargs):
-            probs = probability_fn(params, *args, **kwargs)
-            probs = qml.math.asarray(probs)
+            probs = qml.math.asarray(probability_fn(params, *args, **kwargs))
             if qml.math.ndim(probs) == 1:
                 probs = qml.math.reshape(probs, (1, -1))
                 squeeze = True
@@ -235,16 +210,13 @@ class AQNGOptimizer:
                 squeeze = False
             means = qml.math.dot(probs, features)
             weighted_features = probs[:, :, None] * features[None, :, :]
-            second = qml.math.einsum(
-                "bdr,ds->brs", weighted_features, features
-            )
+            second = qml.math.einsum("bdr,ds->brs", weighted_features, features)
             cov = second - qml.math.einsum("br,bs->brs", means, means)
             return cov[0] if squeeze else cov
 
         return feature_fn, covariance_fn
 
     def bind_probability_fn(self, probability_fn: ArrayFn) -> "AQNGOptimizer":
-        """Bind/change the probability callable used by the selected readout."""
         self.probability_fn = probability_fn
         if self._design is not None:
             self._feature_fn, self._covariance_fn = self._functions_from_design(
@@ -256,7 +228,6 @@ class AQNGOptimizer:
     def bind_metric_functions(
         self, feature_fn: ArrayFn, covariance_fn: ArrayFn
     ) -> "AQNGOptimizer":
-        """Bind custom differentiable feature/covariance functions."""
         self._feature_fn = feature_fn
         self._covariance_fn = covariance_fn
         self._core.reset_metric()
@@ -276,12 +247,6 @@ class AQNGOptimizer:
         recompute_metric: Optional[bool] = None,
         **kwargs,
     ):
-        """Perform one AQNG update.
-
-        Custom ``feature_fn``/``covariance_fn`` may be supplied per call.  If
-        omitted, the functions bound by ``probability_fn`` and the selected
-        readout design are used.
-        """
         f_fn = feature_fn or self._feature_fn
         c_fn = covariance_fn or self._covariance_fn
         if f_fn is None or c_fn is None:
@@ -311,7 +276,6 @@ class AQNGOptimizer:
         recompute_metric: Optional[bool] = None,
         **kwargs,
     ):
-        """Perform one update and return ``(new_params, objective_before_step)``."""
         f_fn = feature_fn or self._feature_fn
         c_fn = covariance_fn or self._covariance_fn
         if f_fn is None or c_fn is None:
