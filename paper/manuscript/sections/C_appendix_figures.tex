@@ -1,24 +1,24 @@
 \section{Supplementary optimization figures}
 
-This appendix reports cell-resolved terminal performance. Each plotted value is the mean over the paired seeds available in that cell; Appendix~\ref{sec:statistics} describes the statistical analysis. Line plots are used throughout to reduce visual density, and the primary benchmark is split by dataset so that optimizer labels remain readable.
+This appendix reports cell-resolved terminal performance. Each plotted value is the mean over the paired seeds available in that cell; Appendix~\ref{sec:statistics} describes the statistical analysis. Line plots are used throughout, and labels are suppressed on upper rows to keep the panels readable.
 
 \begin{figure*}[p]
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[
- group style={group size=4 by 2,horizontal sep=0.9cm,vertical sep=2.25cm},
- width=0.215\textwidth,height=0.215\textwidth,
+ group style={group size=4 by 2,horizontal sep=0.85cm,vertical sep=1.05cm},
+ width=0.215\textwidth,height=0.19\textwidth,
  xtick={0,1,2,3,4,5,6,7},
  xticklabels={A-align,A-rand,A-phys,A-$Z_0$,Full,Block,Adam,SGD},
- x tick label style={rotate=55,anchor=east,font=\scriptsize},
+ x tick label style={rotate=45,anchor=east,font=\tiny},
  tick label style={font=\scriptsize},title style={font=\small},ylabel style={font=\small},grid=major]
-\nextgroupplot[title={RyRz--CZ},ylabel={test loss}]
+\nextgroupplot[title={RyRz--CZ},xtick=\empty,ylabel={test loss}]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.347078) (1,0.354181) (2,0.400088) (3,0.449039) (4,0.4077) (5,0.318655) (6,0.333537) (7,0.316356)};
-\nextgroupplot[title={SU(2)--CNOT}]
+\nextgroupplot[title={SU(2)--CNOT},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.353243) (1,0.36213) (2,0.356208) (3,0.339872) (4,0.43599) (5,0.500748) (6,0.392159) (7,0.392563)};
-\nextgroupplot[title={SU(2)--Haar}]
+\nextgroupplot[title={SU(2)--Haar},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.238782) (1,0.243271) (2,0.262065) (3,0.277882) (4,0.416347) (5,0.449507) (6,0.257007) (7,0.368861)};
-\nextgroupplot[title={$U(1)$--RzXY}]
+\nextgroupplot[title={$U(1)$--RzXY},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,2.12776) (1,1.91614) (2,2.12769) (3,2.12607) (4,2.12757) (5,2.11643) (6,1.11242) (7,2.13101)};
 \nextgroupplot[ylabel={test accuracy}]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.923333) (1,0.906667) (2,0.896667) (3,0.89) (4,0.883333) (5,0.926667) (6,0.92) (7,0.923333)};
@@ -30,7 +30,7 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.466667) (1,0.49) (2,0.466667) (3,0.466667) (4,0.466667) (5,0.466667) (6,0.466667) (7,0.466667)};
 \end{groupplot}
 \end{tikzpicture}
-\caption{Iris primary benchmark. Columns correspond to the four circuit families. The top row shows mean terminal test loss and the bottom row mean terminal test accuracy across the eight optimizers.}
+\caption{Iris primary benchmark. Columns are the four circuit families. Mean terminal test loss is shown above and mean terminal test accuracy below. Optimizer labels appear only on the lower row to avoid label overlap.}
 \label{fig:app_iris01_performance}
 \end{figure*}
 
@@ -38,19 +38,19 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[
- group style={group size=4 by 2,horizontal sep=0.9cm,vertical sep=2.25cm},
- width=0.215\textwidth,height=0.215\textwidth,
+ group style={group size=4 by 2,horizontal sep=0.85cm,vertical sep=1.05cm},
+ width=0.215\textwidth,height=0.19\textwidth,
  xtick={0,1,2,3,4,5,6,7},
  xticklabels={A-align,A-rand,A-phys,A-$Z_0$,Full,Block,Adam,SGD},
- x tick label style={rotate=55,anchor=east,font=\scriptsize},
+ x tick label style={rotate=45,anchor=east,font=\tiny},
  tick label style={font=\scriptsize},title style={font=\small},ylabel style={font=\small},grid=major]
-\nextgroupplot[title={RyRz--CZ},ylabel={test loss}]
+\nextgroupplot[title={RyRz--CZ},xtick=\empty,ylabel={test loss}]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.806892) (1,0.771493) (2,0.789496) (3,0.848402) (4,0.670052) (5,0.680329) (6,0.814475) (7,0.739617)};
-\nextgroupplot[title={SU(2)--CNOT}]
+\nextgroupplot[title={SU(2)--CNOT},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.764371) (1,0.791604) (2,0.806525) (3,0.807908) (4,0.701552) (5,0.647519) (6,0.766753) (7,0.666959)};
-\nextgroupplot[title={SU(2)--Haar}]
+\nextgroupplot[title={SU(2)--Haar},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.861972) (1,0.852377) (2,0.89843) (3,0.876049) (4,0.947145) (5,0.945808) (6,0.855814) (7,0.913653)};
-\nextgroupplot[title={$U(1)$--RzXY}]
+\nextgroupplot[title={$U(1)$--RzXY},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,2.65847) (1,2.56239) (2,2.65989) (3,2.65113) (4,2.65781) (5,2.63553) (6,2.03929) (7,2.66316)};
 \nextgroupplot[ylabel={test accuracy}]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.716667) (1,0.74) (2,0.703333) (3,0.716667) (4,0.79) (5,0.82) (6,0.653333) (7,0.726667)};
@@ -62,7 +62,7 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.333333) (1,0.333333) (2,0.333333) (3,0.333333) (4,0.333333) (5,0.333333) (6,0.346667) (7,0.333333)};
 \end{groupplot}
 \end{tikzpicture}
-\caption{Breast Cancer primary benchmark. Columns correspond to the four circuit families. The top row shows mean terminal test loss and the bottom row mean terminal test accuracy across the eight optimizers.}
+\caption{Breast Cancer primary benchmark. Columns are the four circuit families. Mean terminal test loss is shown above and mean terminal test accuracy below. Optimizer labels appear only on the lower row to avoid label overlap.}
 \label{fig:app_breast_cancer_performance}
 \end{figure*}
 
@@ -70,19 +70,19 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[
- group style={group size=4 by 2,horizontal sep=0.9cm,vertical sep=2.25cm},
- width=0.215\textwidth,height=0.215\textwidth,
+ group style={group size=4 by 2,horizontal sep=0.85cm,vertical sep=1.05cm},
+ width=0.215\textwidth,height=0.19\textwidth,
  xtick={0,1,2,3,4,5,6,7},
  xticklabels={A-align,A-rand,A-phys,A-$Z_0$,Full,Block,Adam,SGD},
- x tick label style={rotate=55,anchor=east,font=\scriptsize},
+ x tick label style={rotate=45,anchor=east,font=\tiny},
  tick label style={font=\scriptsize},title style={font=\small},ylabel style={font=\small},grid=major]
-\nextgroupplot[title={RyRz--CZ},ylabel={test loss}]
+\nextgroupplot[title={RyRz--CZ},xtick=\empty,ylabel={test loss}]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.42519) (1,0.413423) (2,0.445378) (3,0.512902) (4,0.510716) (5,0.414673) (6,0.360085) (7,0.333061)};
-\nextgroupplot[title={SU(2)--CNOT}]
+\nextgroupplot[title={SU(2)--CNOT},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.548681) (1,0.591211) (2,0.535018) (3,0.498235) (4,0.522717) (5,0.67498) (6,0.742999) (7,0.501909)};
-\nextgroupplot[title={SU(2)--Haar}]
+\nextgroupplot[title={SU(2)--Haar},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.848353) (1,0.848516) (2,0.866892) (3,0.786359) (4,0.923859) (5,1.01011) (6,0.927434) (7,0.995569)};
-\nextgroupplot[title={$U(1)$--RzXY}]
+\nextgroupplot[title={$U(1)$--RzXY},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,2.12945) (1,2.089) (2,2.12935) (3,2.11692) (4,2.12803) (5,2.11344) (6,1.85885) (7,2.13069)};
 \nextgroupplot[ylabel={test accuracy}]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.873333) (1,0.886667) (2,0.873333) (3,0.84) (4,0.783333) (5,0.85) (6,0.893333) (7,0.926667)};
@@ -94,7 +94,7 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.466667) (1,0.466667) (2,0.466667) (3,0.466667) (4,0.466667) (5,0.466667) (6,0.466667) (7,0.466667)};
 \end{groupplot}
 \end{tikzpicture}
-\caption{Wine primary benchmark. Columns correspond to the four circuit families. The top row shows mean terminal test loss and the bottom row mean terminal test accuracy across the eight optimizers.}
+\caption{Wine primary benchmark. Columns are the four circuit families. Mean terminal test loss is shown above and mean terminal test accuracy below. Optimizer labels appear only on the lower row to avoid label overlap.}
 \label{fig:app_wine01_performance}
 \end{figure*}
 
@@ -102,19 +102,19 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[
- group style={group size=4 by 2,horizontal sep=0.9cm,vertical sep=2.25cm},
- width=0.215\textwidth,height=0.215\textwidth,
+ group style={group size=4 by 2,horizontal sep=0.85cm,vertical sep=1.05cm},
+ width=0.215\textwidth,height=0.19\textwidth,
  xtick={0,1,2,3,4,5,6,7},
  xticklabels={A-align,A-rand,A-phys,A-$Z_0$,Full,Block,Adam,SGD},
- x tick label style={rotate=55,anchor=east,font=\scriptsize},
+ x tick label style={rotate=45,anchor=east,font=\tiny},
  tick label style={font=\scriptsize},title style={font=\small},ylabel style={font=\small},grid=major]
-\nextgroupplot[title={RyRz--CZ},ylabel={test loss}]
+\nextgroupplot[title={RyRz--CZ},xtick=\empty,ylabel={test loss}]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.666458) (1,0.681292) (2,0.740046) (3,0.852319) (4,0.866297) (5,0.689053) (6,0.716191) (7,0.588429)};
-\nextgroupplot[title={SU(2)--CNOT}]
+\nextgroupplot[title={SU(2)--CNOT},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.644138) (1,0.595464) (2,0.683796) (3,0.6915) (4,0.716724) (5,1.07226) (6,0.65143) (7,0.790031)};
-\nextgroupplot[title={SU(2)--Haar}]
+\nextgroupplot[title={SU(2)--Haar},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.628772) (1,0.641828) (2,0.690945) (3,0.682422) (4,0.754931) (5,0.733019) (6,0.625377) (7,0.693342)};
-\nextgroupplot[title={$U(1)$--RzXY}]
+\nextgroupplot[title={$U(1)$--RzXY},xtick=\empty]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,2.11124) (1,2.07826) (2,2.11216) (3,2.0904) (4,2.12544) (5,2.11844) (6,1.7874) (7,2.13097)};
 \nextgroupplot[ylabel={test accuracy}]
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.75) (1,0.73) (2,0.76) (3,0.663333) (4,0.673333) (5,0.813333) (6,0.703333) (7,0.786667)};
@@ -126,7 +126,7 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.466667) (1,0.466667) (2,0.466667) (3,0.466667) (4,0.466667) (5,0.466667) (6,0.466667) (7,0.466667)};
 \end{groupplot}
 \end{tikzpicture}
-\caption{Digits primary benchmark. Columns correspond to the four circuit families. The top row shows mean terminal test loss and the bottom row mean terminal test accuracy across the eight optimizers.}
+\caption{Digits primary benchmark. Columns are the four circuit families. Mean terminal test loss is shown above and mean terminal test accuracy below. Optimizer labels appear only on the lower row to avoid label overlap.}
 \label{fig:app_digits01_performance}
 \end{figure*}
 
@@ -134,8 +134,8 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[
- group style={group size=2 by 2,horizontal sep=1.45cm,vertical sep=1.25cm},
- width=0.42\textwidth,height=0.27\textwidth,
+ group style={group size=2 by 2,horizontal sep=1.25cm,vertical sep=0.85cm},
+ width=0.42\textwidth,height=0.245\textwidth,
  xlabel={qubits $n$},xtick={4,6,8,10},
  tick label style={font=\scriptsize},title style={font=\small},ylabel style={font=\small},grid=major,
  legend style={draw=none,font=\scriptsize}]
@@ -145,10 +145,14 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \addplot+[mark=triangle,mark size=1.8pt,line width=0.8pt] coordinates {(4,0.207207) (6,0.276515) (8,0.237676) (10,0.241032)};
 \addplot+[mark=diamond,mark size=1.8pt,line width=0.8pt] coordinates {(4,0.377194) (6,0.447147) (8,0.476202) (10,0.429528)};
 \nextgroupplot[title={$U(1)$--RzXY}]
-\addplot+[mark=o,mark size=1.8pt,line width=0.8pt] coordinates {(4,2.05891) (6,2.01986) (8,2.13333) (10,2.13333)};\addlegendentry{A-align}
-\addplot+[mark=square,mark size=1.8pt,line width=0.8pt] coordinates {(4,1.58726) (6,1.70273) (8,2.13333) (10,2.13333)};\addlegendentry{A-rand}
-\addplot+[mark=triangle,mark size=1.8pt,line width=0.8pt] coordinates {(4,2.05963) (6,2.02859) (8,2.13333) (10,2.13333)};\addlegendentry{A-phys}
-\addplot+[mark=diamond,mark size=1.8pt,line width=0.8pt] coordinates {(4,2.10252) (6,2.11803) (8,2.13333) (10,2.13333)};\addlegendentry{Full}
+\addplot+[mark=o,mark size=1.8pt,line width=0.8pt] coordinates {(4,2.05891) (6,2.01986) (8,2.13333) (10,2.13333)};
+\addlegendentry{A-align}
+\addplot+[mark=square,mark size=1.8pt,line width=0.8pt] coordinates {(4,1.58726) (6,1.70273) (8,2.13333) (10,2.13333)};
+\addlegendentry{A-rand}
+\addplot+[mark=triangle,mark size=1.8pt,line width=0.8pt] coordinates {(4,2.05963) (6,2.02859) (8,2.13333) (10,2.13333)};
+\addlegendentry{A-phys}
+\addplot+[mark=diamond,mark size=1.8pt,line width=0.8pt] coordinates {(4,2.10252) (6,2.11803) (8,2.13333) (10,2.13333)};
+\addlegendentry{Full}
 \nextgroupplot[ylabel={test accuracy}]
 \addplot+[mark=o,mark size=1.8pt,line width=0.8pt] coordinates {(4,0.96) (6,0.971429) (8,1) (10,0.986667)};
 \addplot+[mark=square,mark size=1.8pt,line width=0.8pt] coordinates {(4,0.973333) (6,0.975238) (8,0.973333) (10,0.96)};
@@ -161,7 +165,7 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \addplot+[mark=diamond,mark size=1.8pt,line width=0.8pt] coordinates {(4,0.466667) (6,0.466667) (8,0.466667) (10,0.466667)};
 \end{groupplot}
 \end{tikzpicture}
-\caption{Scaling benchmark on Iris at readout order 1. The top row shows mean terminal test loss and the bottom row mean terminal test accuracy as functions of qubit count $n$.}
+\caption{Scaling cells on Iris at readout order 1. The top row shows mean terminal test loss and the bottom row mean terminal test accuracy. Curves are drawn only where multiple qubit counts were actually evaluated.}
 \label{fig:app_scaling_iris01}
 \end{figure*}
 
@@ -169,51 +173,64 @@ This appendix reports cell-resolved terminal performance. Each plotted value is 
 \centering
 \begin{tikzpicture}
 \begin{groupplot}[
- group style={group size=2 by 2,horizontal sep=1.45cm,vertical sep=1.25cm},
- width=0.42\textwidth,height=0.27\textwidth,
+ group style={group size=2 by 2,horizontal sep=1.25cm,vertical sep=0.85cm},
+ width=0.42\textwidth,height=0.245\textwidth,
  xlabel={qubits $n$},xtick={4,6,8,10},
  tick label style={font=\scriptsize},title style={font=\small},ylabel style={font=\small},grid=major,
  legend style={draw=none,font=\scriptsize}]
 \nextgroupplot[title={SU(2)--Haar},ylabel={test loss}]
-\addplot+[mark=o,only marks,mark size=2pt] coordinates {(6,0.634899)};
-\addplot+[mark=square,only marks,mark size=2pt] coordinates {(6,0.678486)};
-\addplot+[mark=triangle,only marks,mark size=2pt] coordinates {(6,0.73019)};
-\addplot+[mark=diamond,only marks,mark size=2pt] coordinates {(6,0.794295)};
+\addplot+[mark=o,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.634899)};
+\addplot+[mark=square,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.678486)};
+\addplot+[mark=triangle,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.73019)};
+\addplot+[mark=diamond,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.794295)};
 \nextgroupplot[title={$U(1)$--RzXY}]
-\addplot+[mark=o,only marks,mark size=2pt] coordinates {(6,1.99186)};\addlegendentry{A-align}
-\addplot+[mark=square,only marks,mark size=2pt] coordinates {(6,1.9702)};\addlegendentry{A-rand}
-\addplot+[mark=triangle,only marks,mark size=2pt] coordinates {(6,2.01829)};\addlegendentry{A-phys}
-\addplot+[mark=diamond,only marks,mark size=2pt] coordinates {(6,2.12405)};\addlegendentry{Full}
+\addplot+[mark=o,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,1.99186)};
+\addlegendentry{A-align}
+\addplot+[mark=square,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,1.9702)};
+\addlegendentry{A-rand}
+\addplot+[mark=triangle,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,2.01829)};
+\addlegendentry{A-phys}
+\addplot+[mark=diamond,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,2.12405)};
+\addlegendentry{Full}
 \nextgroupplot[ylabel={test accuracy}]
-\addplot+[mark=o,only marks,mark size=2pt] coordinates {(6,0.795556)};
-\addplot+[mark=square,only marks,mark size=2pt] coordinates {(6,0.764444)};
-\addplot+[mark=triangle,only marks,mark size=2pt] coordinates {(6,0.751111)};
-\addplot+[mark=diamond,only marks,mark size=2pt] coordinates {(6,0.684444)};
+\addplot+[mark=o,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.795556)};
+\addplot+[mark=square,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.764444)};
+\addplot+[mark=triangle,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.751111)};
+\addplot+[mark=diamond,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.684444)};
 \nextgroupplot
-\addplot+[mark=o,only marks,mark size=2pt] coordinates {(6,0.466667)};
-\addplot+[mark=square,only marks,mark size=2pt] coordinates {(6,0.466667)};
-\addplot+[mark=triangle,only marks,mark size=2pt] coordinates {(6,0.466667)};
-\addplot+[mark=diamond,only marks,mark size=2pt] coordinates {(6,0.466667)};
+\addplot+[mark=o,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.466667)};
+\addplot+[mark=square,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.466667)};
+\addplot+[mark=triangle,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.466667)};
+\addplot+[mark=diamond,only marks,mark size=1.8pt,line width=0.8pt] coordinates {(6,0.466667)};
 \end{groupplot}
 \end{tikzpicture}
-\caption{Digits scaling cells at readout order 1. Only $n=6$ is available for Digits in this scaling block, so the panels show points rather than implying an unmeasured qubit-count trend.}
+\caption{Scaling cells on Digits at readout order 1. The top row shows mean terminal test loss and the bottom row mean terminal test accuracy. Curves are drawn only where multiple qubit counts were actually evaluated.}
 \label{fig:app_scaling_digits01}
 \end{figure*}
 
 \begin{figure*}[p]
 \centering
 \begin{tikzpicture}
-\begin{groupplot}[group style={group size=3 by 1,horizontal sep=1.15cm},width=0.285\textwidth,height=0.25\textwidth,
- xtick={0,1,2,3,4,5},xticklabels={A-align,A-rand,A-phys,Adam,SGD,Full},
- x tick label style={rotate=45,anchor=east,font=\scriptsize},tick label style={font=\scriptsize},title style={font=\small},ylabel style={font=\small},grid=major]
-\nextgroupplot[title={$n=8,L=3$},ylabel={mean test loss}]
-\addplot+[mark=o,line width=0.8pt] coordinates {(0,0.167762) (1,0.209617) (2,0.237676) (3,0.231153) (4,0.425057) (5,0.476202)};
-\nextgroupplot[title={$n=10,L=3$}]
-\addplot+[mark=o,line width=0.8pt] coordinates {(0,0.253791) (1,0.252036) (2,0.241032) (3,0.264865) (4,0.407165) (5,0.429528)};
-\nextgroupplot[title={$n=6,L=5$}]
-\addplot+[mark=o,line width=0.8pt] coordinates {(0,0.138588) (1,0.126763) (2,0.183283) (3,0.184247) (4,0.367199) (5,0.388011)};
+\begin{groupplot}[
+ group style={group size=3 by 2,horizontal sep=1.0cm,vertical sep=0.9cm},
+ width=0.29\textwidth,height=0.205\textwidth,
+ xtick={0,1,2,3,4,5},xticklabels={A-align,A-rand,A-phys,Full,Adam,SGD},
+ x tick label style={rotate=42,anchor=east,font=\tiny},tick label style={font=\scriptsize},
+ title style={font=\small},ylabel style={font=\small},grid=major]
+\nextgroupplot[title={$n=8,L=3$},xtick=\empty,ylabel={test loss}]
+\addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.167762) (1,0.209617) (2,0.237676) (3,0.476202) (4,0.231153) (5,0.425057)};
+\nextgroupplot[title={$n=10,L=3$},xtick=\empty]
+\addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.253791) (1,0.252036) (2,0.241032) (3,0.429528) (4,0.264865) (5,0.407165)};
+\nextgroupplot[title={$n=6,L=5$},xtick=\empty]
+\addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.138588) (1,0.126763) (2,0.183283) (3,0.388011) (4,0.184247) (5,0.367199)};
+\nextgroupplot[ylabel={test accuracy}]
+\addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,1) (1,0.973333) (2,0.96) (3,0.933333) (4,1) (5,0.933333)};
+\nextgroupplot
+\addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,0.986667) (1,0.96) (2,0.96) (3,0.853333) (4,0.96) (5,0.933333)};
+\nextgroupplot
+\addplot+[mark=o,mark size=1.5pt,line width=0.7pt] coordinates {(0,1) (1,1) (2,1) (3,0.96) (4,1) (5,0.986667)};
 \end{groupplot}
 \end{tikzpicture}
-\caption{Matched large/deep follow-up on Iris/SU(2)--Haar. Each panel shows mean terminal test loss across the six compared optimizers for one post-hoc exploratory setting.}
+\caption{Matched large/deep follow-up on Iris/SU(2)--Haar. Columns correspond to $(n,L)=(8,3)$, $(10,3)$, and $(6,5)$. The upper row shows mean terminal test loss and the lower row mean terminal test accuracy across the six matched optimizers. This comparison is post-hoc and exploratory.}
 \label{fig:app_followup_curves}
 \end{figure*}
