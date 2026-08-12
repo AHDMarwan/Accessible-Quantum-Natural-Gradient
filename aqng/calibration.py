@@ -27,30 +27,39 @@ def calibration_score_rows(
     """Build normalized calibration score rows directly from a probability callable.
 
     ``probability_fn`` must return either one probability vector with shape ``(D,)``
-    or a batch with shape ``(B, D)``.  The first function argument is assumed to
-    be the trainable parameter array.  The probability Jacobian is differentiated
+    or a batch with shape ``(B, D)``. The first function argument is assumed to
+    be the trainable parameter array. The probability Jacobian is differentiated
     automatically with PennyLane/Autograd and flattened over parameter axes.
 
     When ``directions`` is omitted, isotropic unit directions are drawn in the
-    flattened parameter space.  Labels are never consumed by this routine.
+    flattened parameter space. Labels are never consumed by this routine.
     """
-    probs = np.asarray(qml.math.toarray(probability_fn(params, *args, **kwargs)), dtype=float)
+    probs = np.asarray(
+        qml.math.toarray(probability_fn(params, *args, **kwargs)), dtype=float
+    )
     if probs.ndim not in (1, 2):
         raise ValueError("probability_fn must return shape (D,) or (B,D)")
 
-    jac_fn = qml.jacobian(probability_fn, argnum=0)
-    jac_raw = np.asarray(qml.math.toarray(jac_fn(params, *args, **kwargs)), dtype=float)
+    # PennyLane >=0.45 renamed ``argnum`` to ``argnums`` for qml.jacobian.
+    jac_fn = qml.jacobian(probability_fn, argnums=0)
+    jac_raw = np.asarray(
+        qml.math.toarray(jac_fn(params, *args, **kwargs)), dtype=float
+    )
 
     pshape = tuple(qml.math.shape(params))
     p = int(np.prod(pshape)) if pshape else 1
     if probs.ndim == 1:
         if jac_raw.shape[:1] != probs.shape:
-            raise ValueError("probability Jacobian output shape is incompatible with probabilities")
+            raise ValueError(
+                "probability Jacobian output shape is incompatible with probabilities"
+            )
         jacs = jac_raw.reshape(1, probs.shape[0], p)
         probs_batch = probs[None, :]
     else:
         if jac_raw.shape[:2] != probs.shape:
-            raise ValueError("probability Jacobian output shape is incompatible with probabilities")
+            raise ValueError(
+                "probability Jacobian output shape is incompatible with probabilities"
+            )
         jacs = jac_raw.reshape(probs.shape[0], probs.shape[1], p)
         probs_batch = probs
 

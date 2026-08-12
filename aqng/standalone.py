@@ -7,21 +7,42 @@ from typing import Mapping, Optional, Sequence
 import numpy as np
 
 from .calibration import calibration_score_rows
+from .config import AQNGConfig
 from .optimizer import AQNGOptimizer as _BaseAQNGOptimizer, ReadoutMode
+from .state import load_optimizer_state, save_optimizer_state
 
 
 class AQNGOptimizer(_BaseAQNGOptimizer):
-    """High-level AQNG optimizer with automatic readout calibration.
+    """High-level AQNG optimizer with automatic readout calibration."""
 
-    The optimizer can be used without manually constructing ``feature_fn`` and
-    ``covariance_fn``. Bind a differentiable computational-basis probability
-    callable, calibrate the readout from unlabeled calibration inputs, then call
-    :meth:`step` or :meth:`step_and_cost`.
+    @classmethod
+    def from_config(cls, config: AQNGConfig, *, probability_fn=None) -> "AQNGOptimizer":
+        values = config.to_dict()
+        return cls(probability_fn=probability_fn, **values)
 
-    The supervised objective and the AQNG metric may consume different data.
-    Pass ``metric_args`` / ``metric_kwargs`` to a step when the metric minibatch
-    differs from the objective minibatch.
-    """
+    @property
+    def configuration(self) -> AQNGConfig:
+        core = self._core
+        return AQNGConfig(
+            stepsize=core.stepsize,
+            readout=self.readout_name,
+            lam=core.lam,
+            cov_lam=core.cov_lam,
+            metric_every=core.metric_every,
+            adaptive_refresh=core.adaptive_refresh,
+            refresh_direction_growth=core.refresh_direction_growth,
+            max_direction_norm=core.max_direction_norm,
+            max_metric_step=core.max_metric_step,
+            solver=core.solver,
+            rcond=core.rcond,
+            project_cov_psd=core.project_cov_psd,
+            reduction=core.reduction,
+            metric_normalization=core.metric_normalization,
+            normalization_target=core.normalization_target,
+            damping_mode=core.damping_mode,
+            seed=self.seed,
+            readout_order=self.readout_order,
+        )
 
     def calibrate(
         self,
@@ -38,13 +59,6 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         svd_tolerance: float = 1e-10,
         **calibration_kwargs,
     ):
-        """Calibrate and bind physical/random/aligned readouts from ``probability_fn``.
-
-        ``calibration_args`` and ``calibration_kwargs`` are forwarded only to the
-        probability callable. Calibration is label-free. For ``readout='aligned'``
-        the calibration inputs should be independent of the supervised minibatch
-        used for optimization/evaluation.
-        """
         if self.probability_fn is None:
             raise RuntimeError(
                 "calibrate() requires probability_fn. Pass it to AQNGOptimizer(...) "
@@ -74,6 +88,23 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         )
 
     fit = calibrate
+
+    def save(self, path):
+        return save_optimizer_state(
+            path,
+            config=self.configuration.to_dict(),
+            readout=self.readout_name,
+            designs=self._designs,
+        )
+
+    @classmethod
+    def load(cls, path, *, probability_fn=None) -> "AQNGOptimizer":
+        metadata, designs = load_optimizer_state(path)
+        config = AQNGConfig.from_dict(metadata["config"])
+        optimizer = cls.from_config(config, probability_fn=probability_fn)
+        if designs:
+            optimizer.bind_readout_designs(designs)
+        return optimizer
 
     def _metric_functions_for_step(
         self,
@@ -112,13 +143,6 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         recompute_metric: Optional[bool] = None,
         **objective_kwargs,
     ):
-        """Perform one AQNG update.
-
-        By default the probability/readout metric receives the same arguments as
-        ``objective_fn``. Set ``metric_args`` and/or ``metric_kwargs`` to use a
-        distinct metric minibatch while leaving the supervised objective call
-        unchanged.
-        """
         feature_fn, covariance_fn = self._metric_functions_for_step(
             metric_args, metric_kwargs
         )
@@ -144,7 +168,6 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         recompute_metric: Optional[bool] = None,
         **objective_kwargs,
     ):
-        """Perform one update and return ``(new_params, objective_before_step)``."""
         feature_fn, covariance_fn = self._metric_functions_for_step(
             metric_args, metric_kwargs
         )
@@ -160,4 +183,4 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         )
 
 
-__all__ = ["AQNGOptimizer", "ReadoutMode"]
+__all__ = ["AQNGOptimizer", "AQNGConfig", "ReadoutMode"]
