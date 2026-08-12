@@ -61,7 +61,7 @@ The scaling experiment gives a clean geometric check of the readout-rank theory.
 This strong geometric orientation does not translate into a monotonic optimization advantage. The aligned mean test losses at $n=4,6,8,10$ are $0.221$, $0.237$, $0.168$, and $0.254$, respectively. The corresponding physical-readout losses are $0.207$, $0.273$, $0.238$, and $0.241$. Thus aligned AQNG is best at $n=6$ and $n=8$, but not at $n=4$ or $n=10$. Accessibility can therefore increase relative to the null baseline while task utility remains nonmonotonic.
 
 \subsection{Matched large/deep comparison with Adam and SGD}
-The large/deep extension supplies the missing first-order baselines at $(n,L)=(8,3),(10,3),(6,5)$ for SU(2)--Haar on Iris. Table~\ref{tab:large_deep} combines the matched five-seed means. The pooled 15-case loss is $0.1867$ for aligned AQNG, compared with $0.1961$ for random AQNG, $0.2207$ for physical AQNG, $0.2268$ for Adam, $0.3998$ for SGD, and $0.4312$ for full QNG.
+The large/deep extension is a post-hoc exploratory comparison that supplies first-order baselines at $(n,L)=(8,3),(10,3),(6,5)$ for SU(2)--Haar on Iris. Table~\ref{tab:large_deep} combines the matched five-seed means. The pooled 15-case loss is $0.1867$ for aligned AQNG, compared with $0.1961$ for random AQNG, $0.2207$ for physical AQNG, $0.2268$ for Adam, $0.3998$ for SGD, and $0.4312$ for full QNG.
 
 \begin{table}[t]
 \centering
@@ -81,7 +81,7 @@ Full-QNG      & 0.476 & 0.430 & 0.388 \\
 \end{tabular}
 \end{table}
 
-In the pooled paired analysis, aligned AQNG beats SGD in 15/15 cases and full QNG in 14/15. The Holm-adjusted Wilcoxon values are $p_{\rm Holm}=1.22\times10^{-3}$ against SGD and $5.80\times10^{-3}$ against full QNG. Against Adam, aligned AQNG wins 10/15 cases with a mean loss advantage of $0.0400$, but the Holm-adjusted test is not significant. Thus AQNG is clearly stronger than SGD and full QNG in these matched settings, while Adam remains a competitive baseline.
+In the pooled paired analysis, aligned AQNG beats SGD in 15/15 cases and full QNG in 14/15. The Holm-adjusted Wilcoxon values are $p_{\rm Holm}=1.22\times10^{-3}$ against SGD and $5.80\times10^{-3}$ against full QNG. Against Adam, aligned AQNG wins 10/15 cases with a mean loss advantage of $0.0400$, but the Holm-adjusted test is not significant. Within this exploratory extension, aligned AQNG has significantly lower paired loss than SGD and full QNG after Holm correction, while the difference from Adam is not statistically resolved.
 
 \subsection{More retained geometry can hurt}
 The readout-order ablation provides a direct counterexample to the idea that maximizing retained tangent mass is sufficient. On Iris/SU(2)--Haar, increasing the diagonal readout from weight one to weight two raises aligned retention from $0.361$ to $0.797$, yet mean test loss worsens from $0.237$ to $0.361$. On Digits/SU(2)--Haar, aligned retention rises from $0.308$ to $0.738$, while loss worsens from $0.620$ to $0.716$. Figure~\ref{fig:readout_order_tradeoff} shows the same tradeoff directly. The first-step quantity $g^{\mathsf T}d$ simultaneously drops from $7.05$ to $2.57$ on Iris and from $3.82$ to $1.71$ on Digits. Metric diagnostics show that the richer readout is substantially harder to condition. These results motivate condition-aware rather than retention-maximizing readout design.
@@ -94,8 +94,8 @@ The readout-order ablation provides a direct counterexample to the idea that max
   height=0.70\columnwidth,
   xlabel={aligned retained mass $R$},
   ylabel={mean test loss},
-  xmin=0.26, xmax=0.84,
-  ymin=0.20, ymax=0.76,
+  xmin=0.24, xmax=0.86,
+  ymin=0.20, ymax=0.78,
   legend style={draw=none, font=\scriptsize, at={(0.03,0.97)}, anchor=north west},
   tick label style={font=\scriptsize},
   label style={font=\small},
@@ -106,9 +106,9 @@ The readout-order ablation provides a direct counterexample to the idea that max
 \addplot+[mark=square] coordinates {(0.3606,0.2373) (0.7969,0.3615)};
 \addlegendentry{Iris}
 \node[font=\scriptsize, anchor=south west] at (axis cs:0.3078,0.6199) {order 1};
-\node[font=\scriptsize, anchor=south west] at (axis cs:0.7383,0.7165) {order 2};
+\node[font=\scriptsize, anchor=west, xshift=2pt] at (axis cs:0.7383,0.7165) {order 2};
 \node[font=\scriptsize, anchor=south west] at (axis cs:0.3606,0.2373) {order 1};
-\node[font=\scriptsize, anchor=south west] at (axis cs:0.7969,0.3615) {order 2};
+\node[font=\scriptsize, anchor=east, xshift=-2pt] at (axis cs:0.7969,0.3615) {order 2};
 \end{axis}
 \end{tikzpicture}
 \caption{Readout-order tradeoff for aligned AQNG on SU(2)--Haar. Moving from weight-one to weight-two diagonal readouts increases retained tangent mass but also increases mean test loss on both datasets.}
@@ -144,7 +144,7 @@ The number-conserving $U(1)$ family is the strongest negative control. Its physi
 \label{fig:u1_signal}
 \end{figure}
 
-This regime is consistent with a barren-plateau-like gradient-collapse signal, but we do not claim a formal barren-plateau scaling theorem: the scaling study uses five seeds and was not designed to estimate an exponential gradient-variance law over a large initialization ensemble. The directly observed conclusion is narrower: near-complete measurement accessibility does not rescue a vanishing task-signal regime.
+This regime is consistent with the gradient-concentration phenomenology associated with barren plateaus~\cite{McClean2018}, but we do not claim a formal barren-plateau scaling theorem: the scaling study uses five seeds and was not designed to estimate an exponential gradient-variance law over a large initialization ensemble. The directly observed conclusion is narrower: near-complete measurement accessibility does not rescue a vanishing task-signal regime.
 
 \subsection{Finite-shot robustness}
 At 1000 and 10000 shots, AQNG remains operational across the tested Iris and Digits SU(2)--Haar cells. For example, on Digits the aligned losses are $0.661$ and $0.624$ at 1000 and 10000 shots, respectively, compared with $0.829$ and $0.790$ for the full-QNG control. On Iris, random-rank AQNG is the best of the tested AQNG variants at both shot counts. The ordering is therefore not monotonic in shot count or readout orientation. Because the finite-shot full-QNG implementation uses an analytic metric oracle, these numbers are optimization references rather than a resource-fair hardware comparison.
