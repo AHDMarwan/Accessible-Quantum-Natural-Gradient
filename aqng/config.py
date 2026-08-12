@@ -8,11 +8,7 @@ from typing import Optional
 
 @dataclass(frozen=True)
 class AQNGConfig:
-    """Serializable configuration for :class:`aqng.AQNGOptimizer`.
-
-    This object contains only numerical/readout policy. Callables such as the
-    probability function and objective are deliberately excluded.
-    """
+    """Serializable configuration for :class:`aqng.AQNGOptimizer`."""
 
     stepsize: float = 0.01
     readout: str = "physical"
@@ -27,6 +23,9 @@ class AQNGConfig:
     rcond: float = 1e-10
     project_cov_psd: bool = True
     reduction: str = "mean"
+    metric_normalization: str = "none"
+    normalization_target: Optional[float] = None
+    damping_mode: str = "absolute"
     seed: int = 0
     readout_order: int = 1
 
@@ -49,6 +48,12 @@ class AQNGConfig:
             raise ValueError("reduction must be mean or sum")
         if self.rcond <= 0:
             raise ValueError("rcond must be positive")
+        if self.metric_normalization not in {"none", "trace", "maxeig"}:
+            raise ValueError("metric_normalization must be none, trace, or maxeig")
+        if self.normalization_target is not None and self.normalization_target <= 0:
+            raise ValueError("normalization_target must be positive or None")
+        if self.damping_mode not in {"absolute", "mean_eig", "maxeig"}:
+            raise ValueError("damping_mode must be absolute, mean_eig, or maxeig")
         if self.readout_order < 1:
             raise ValueError("readout_order must be >= 1")
         if self.readout not in {"physical", "random", "aligned"}:
