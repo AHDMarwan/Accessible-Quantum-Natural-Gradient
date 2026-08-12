@@ -13,27 +13,15 @@ from .state import load_optimizer_state, save_optimizer_state
 
 
 class AQNGOptimizer(_BaseAQNGOptimizer):
-    """High-level AQNG optimizer with automatic readout calibration.
-
-    The optimizer can be used without manually constructing ``feature_fn`` and
-    ``covariance_fn``. Bind a differentiable computational-basis probability
-    callable, calibrate the readout from unlabeled calibration inputs, then call
-    :meth:`step` or :meth:`step_and_cost`.
-
-    The supervised objective and the AQNG metric may consume different data.
-    Pass ``metric_args`` / ``metric_kwargs`` to a step when the metric minibatch
-    differs from the objective minibatch.
-    """
+    """High-level AQNG optimizer with automatic readout calibration."""
 
     @classmethod
     def from_config(cls, config: AQNGConfig, *, probability_fn=None) -> "AQNGOptimizer":
-        """Construct an optimizer from a typed, serializable configuration."""
         values = config.to_dict()
         return cls(probability_fn=probability_fn, **values)
 
     @property
     def configuration(self) -> AQNGConfig:
-        """Return the current public optimizer configuration."""
         core = self._core
         return AQNGConfig(
             stepsize=core.stepsize,
@@ -49,6 +37,9 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
             rcond=core.rcond,
             project_cov_psd=core.project_cov_psd,
             reduction=core.reduction,
+            metric_normalization=core.metric_normalization,
+            normalization_target=core.normalization_target,
+            damping_mode=core.damping_mode,
             seed=self.seed,
             readout_order=self.readout_order,
         )
@@ -68,13 +59,6 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         svd_tolerance: float = 1e-10,
         **calibration_kwargs,
     ):
-        """Calibrate and bind physical/random/aligned readouts from ``probability_fn``.
-
-        ``calibration_args`` and ``calibration_kwargs`` are forwarded only to the
-        probability callable. Calibration is label-free. For ``readout='aligned'``
-        the calibration inputs should be independent of the supervised minibatch
-        used for optimization/evaluation.
-        """
         if self.probability_fn is None:
             raise RuntimeError(
                 "calibrate() requires probability_fn. Pass it to AQNGOptimizer(...) "
@@ -106,12 +90,6 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
     fit = calibrate
 
     def save(self, path):
-        """Persist hyperparameters and calibrated readouts without pickling callables.
-
-        The probability/objective functions and cached metric tensor are not
-        serialized. Supply a compatible ``probability_fn`` when loading if the
-        restored optimizer will compute AQNG metrics.
-        """
         return save_optimizer_state(
             path,
             config=self.configuration.to_dict(),
@@ -121,7 +99,6 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
 
     @classmethod
     def load(cls, path, *, probability_fn=None) -> "AQNGOptimizer":
-        """Restore an optimizer configuration and calibrated readout designs."""
         metadata, designs = load_optimizer_state(path)
         config = AQNGConfig.from_dict(metadata["config"])
         optimizer = cls.from_config(config, probability_fn=probability_fn)
@@ -166,13 +143,6 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         recompute_metric: Optional[bool] = None,
         **objective_kwargs,
     ):
-        """Perform one AQNG update.
-
-        By default the probability/readout metric receives the same arguments as
-        ``objective_fn``. Set ``metric_args`` and/or ``metric_kwargs`` to use a
-        distinct metric minibatch while leaving the supervised objective call
-        unchanged.
-        """
         feature_fn, covariance_fn = self._metric_functions_for_step(
             metric_args, metric_kwargs
         )
@@ -198,7 +168,6 @@ class AQNGOptimizer(_BaseAQNGOptimizer):
         recompute_metric: Optional[bool] = None,
         **objective_kwargs,
     ):
-        """Perform one update and return ``(new_params, objective_before_step)``."""
         feature_fn, covariance_fn = self._metric_functions_for_step(
             metric_args, metric_kwargs
         )
