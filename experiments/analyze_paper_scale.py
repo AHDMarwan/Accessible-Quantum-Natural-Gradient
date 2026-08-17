@@ -32,7 +32,7 @@ CORE_METHODS = [
 def _block_from_tag(tag: str) -> str:
     tag = str(tag)
     for name in ("primary", "finite", "scaling", "depth", "order"):
-        if f"paper-{name}" in tag:
+        if f"paper-run-{name}-" in tag or f"paper-{name}-" in tag:
             return name
     return "unknown"
 
